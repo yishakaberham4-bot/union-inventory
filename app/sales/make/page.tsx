@@ -58,8 +58,19 @@ export default async function MakeSalePage() {
   sale_type text not null default 'cash',
   sold_by uuid,
   sold_by_email text,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  -- Credit support (optional columns)
+  credit_customer_name text,
+  credit_phone text,
+  credit_amount numeric(12,2),
+  paid_amount numeric(12,2)
 );
+
+-- If sales table already exists, add the credit columns:
+-- alter table public.sales add column if not exists credit_customer_name text;
+-- alter table public.sales add column if not exists credit_phone text;
+-- alter table public.sales add column if not exists credit_amount numeric(12,2);
+-- alter table public.sales add column if not exists paid_amount numeric(12,2);
 
 create index if not exists sales_created_at_idx on public.sales (created_at desc);`}
         </pre>

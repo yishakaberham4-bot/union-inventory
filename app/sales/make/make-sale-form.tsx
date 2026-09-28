@@ -25,14 +25,25 @@ const BANKS = [
   'Other',
 ]
 
+type SaleType = 'cash' | 'card' | 'mb' | 'credit'
+type CreditMode = 'full' | 'two'
+
 export default function MakeSaleForm({ products }: { products: ProductOption[] }) {
   const router = useRouter()
   const [productId, setProductId] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [sellingPrice, setSellingPrice] = useState('')
-  const [saleType, setSaleType] = useState<'cash' | 'card' | 'mb'>('cash')
+  const [saleType, setSaleType] = useState<SaleType>('cash')
   const [bank, setBank] = useState('')
   const [otherBank, setOtherBank] = useState('')
+  // Credit fields
+  const [creditName, setCreditName] = useState('')
+  const [creditPhone, setCreditPhone] = useState('')
+  const [creditMode, setCreditMode] = useState<CreditMode>('full')
+  // For two-times: how the first half is paid
+  const [paidHalfType, setPaidHalfType] = useState<'cash' | 'card' | 'mb'>('cash')
+  const [paidHalfBank, setPaidHalfBank] = useState('')
+  const [paidHalfOtherBank, setPaidHalfOtherBank] = useState('')
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [isPending, setIsPending] = useState(false)
 
@@ -52,7 +63,23 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
   const priceNum = parseFloat(sellingPrice)
   const total =
     selected && !isNaN(priceNum) && priceNum >= 0 ? priceNum * quantity : 0
+  const halfTotal = Number((total / 2).toFixed(2))
   const maxQty = selected?.stock_qty ?? 0
+
+  function resetForm() {
+    setProductId('')
+    setQuantity(1)
+    setSellingPrice('')
+    setSaleType('cash')
+    setBank('')
+    setOtherBank('')
+    setCreditName('')
+    setCreditPhone('')
+    setCreditMode('full')
+    setPaidHalfType('cash')
+    setPaidHalfBank('')
+    setPaidHalfOtherBank('')
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -74,6 +101,7 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
       setMessage({ type: 'err', text: 'Enter a valid selling price (≥ 0)' })
       return
     }
+
     if (saleType === 'mb') {
       const bankName = bank === 'Other' ? otherBank.trim() : bank
       if (!bankName) {
@@ -82,13 +110,55 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
       }
     }
 
+    if (saleType === 'credit') {
+      if (!creditName.trim()) {
+        setMessage({ type: 'err', text: 'Enter the customer name for credit' })
+        return
+      }
+      if (!creditPhone.trim()) {
+        setMessage({ type: 'err', text: 'Enter the customer phone number for credit' })
+        return
+      }
+      if (creditMode === 'two') {
+        if (paidHalfType === 'mb') {
+          const bankName =
+            paidHalfBank === 'Other' ? paidHalfOtherBank.trim() : paidHalfBank
+          if (!bankName) {
+            setMessage({
+              type: 'err',
+              text: 'Select which bank for the paid half (MB)',
+            })
+            return
+          }
+        }
+      }
+    }
+
     const formData = new FormData()
     formData.set('product_id', productId)
     formData.set('quantity', String(quantity))
     formData.set('unit_price', String(priceNum))
     formData.set('sale_type', saleType)
+
     if (saleType === 'mb') {
       formData.set('bank', bank === 'Other' ? otherBank.trim() : bank)
+    }
+
+    if (saleType === 'credit') {
+      formData.set('credit_name', creditName.trim())
+      formData.set('credit_phone', creditPhone.trim())
+      formData.set('credit_mode', creditMode)
+      if (creditMode === 'two') {
+        formData.set('paid_half_type', paidHalfType)
+        if (paidHalfType === 'mb') {
+          formData.set(
+            'paid_half_bank',
+            paidHalfBank === 'Other'
+              ? paidHalfOtherBank.trim()
+              : paidHalfBank
+          )
+        }
+      }
     }
 
     setIsPending(true)
@@ -102,12 +172,7 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
         type: 'ok',
         text: result?.message || 'Sale completed successfully',
       })
-      setProductId('')
-      setQuantity(1)
-      setSellingPrice('')
-      setSaleType('cash')
-      setBank('')
-      setOtherBank('')
+      resetForm()
       // Soft refresh product list (stock numbers) without blocking UI
       setTimeout(() => router.refresh(), 300)
     } catch (err) {
@@ -230,12 +295,13 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
         <label className="block text-sm font-medium text-slate-300 mb-1.5">
           Sale type
         </label>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {(
             [
               { id: 'cash', label: 'Cash' },
               { id: 'card', label: 'Card' },
               { id: 'mb', label: 'MB' },
+              { id: 'credit', label: 'Credit' },
             ] as const
           ).map((t) => (
             <button
@@ -247,6 +313,14 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
                 if (t.id !== 'mb') {
                   setBank('')
                   setOtherBank('')
+                }
+                if (t.id !== 'credit') {
+                  setCreditName('')
+                  setCreditPhone('')
+                  setCreditMode('full')
+                  setPaidHalfType('cash')
+                  setPaidHalfBank('')
+                  setPaidHalfOtherBank('')
                 }
               }}
               className={`rounded-xl py-3 text-sm font-medium transition border ${
@@ -290,6 +364,146 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
               required
               disabled={isPending}
             />
+          )}
+        </div>
+      )}
+
+      {saleType === 'credit' && (
+        <div className="space-y-4 rounded-2xl border border-amber-800/40 bg-amber-950/20 p-4">
+          <p className="text-sm font-medium text-amber-200">Credit details</p>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              Customer name <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={creditName}
+              onChange={(e) => setCreditName(e.target.value)}
+              placeholder="Full name of person"
+              className="w-full rounded-xl bg-slate-950 border border-slate-700 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              required
+              disabled={isPending}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              Phone number <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="tel"
+              value={creditPhone}
+              onChange={(e) => setCreditPhone(e.target.value)}
+              placeholder="e.g. 09xxxxxxxx"
+              className="w-full rounded-xl bg-slate-950 border border-slate-700 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              required
+              disabled={isPending}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              Type of credit <span className="text-red-400">*</span>
+            </label>
+            <select
+              value={creditMode}
+              onChange={(e) => setCreditMode(e.target.value as CreditMode)}
+              className="w-full rounded-xl bg-slate-950 border border-slate-700 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              disabled={isPending}
+            >
+              <option value="full">Full credit</option>
+              <option value="two">Two times payment (half now, half credit)</option>
+            </select>
+          </div>
+
+          {creditMode === 'full' && selected && !isNaN(priceNum) && (
+            <div className="rounded-xl border border-amber-700/40 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+              Full amount <span className="font-semibold">{total.toFixed(2)}</span> will
+              be saved as credit for {creditName || 'this customer'}.
+            </div>
+          )}
+
+          {creditMode === 'two' && (
+            <div className="space-y-3 rounded-xl border border-slate-700 bg-slate-900/80 p-4">
+              <p className="text-sm text-slate-300">
+                Half now (
+                <span className="font-semibold text-emerald-300">
+                  {halfTotal.toFixed(2)}
+                </span>
+                ), half as credit (
+                <span className="font-semibold text-amber-300">
+                  {halfTotal.toFixed(2)}
+                </span>
+                )
+              </p>
+
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                How is the first half paid?
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    { id: 'cash', label: 'Cash' },
+                    { id: 'card', label: 'Card' },
+                    { id: 'mb', label: 'MB' },
+                  ] as const
+                ).map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => {
+                      setPaidHalfType(t.id)
+                      if (t.id !== 'mb') {
+                        setPaidHalfBank('')
+                        setPaidHalfOtherBank('')
+                      }
+                    }}
+                    className={`rounded-xl py-2.5 text-sm font-medium transition border ${
+                      paidHalfType === t.id
+                        ? 'bg-emerald-700 border-emerald-500 text-white'
+                        : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {paidHalfType === 'mb' && (
+                <div className="space-y-2 pt-1">
+                  <label className="block text-sm font-medium text-slate-300">
+                    Which bank for paid half? <span className="text-red-400">*</span>
+                  </label>
+                  <select
+                    value={paidHalfBank}
+                    onChange={(e) => setPaidHalfBank(e.target.value)}
+                    className="w-full rounded-xl bg-slate-950 border border-slate-700 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    required
+                    disabled={isPending}
+                  >
+                    <option value="">— Select bank —</option>
+                    {BANKS.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
+                  {paidHalfBank === 'Other' && (
+                    <input
+                      type="text"
+                      value={paidHalfOtherBank}
+                      onChange={(e) => setPaidHalfOtherBank(e.target.value)}
+                      placeholder="Type bank name"
+                      className="w-full rounded-xl bg-slate-950 border border-slate-700 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      required
+                      disabled={isPending}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

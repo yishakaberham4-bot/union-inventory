@@ -4,7 +4,18 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6">
       <div className="max-w-md w-full text-center space-y-6">
-        
+        {/* Union logo above title */}
+        <div className="flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="Union Computers & Software"
+            width={200}
+            height={200}
+            className="object-contain drop-shadow-lg w-[180px] h-[180px] sm:w-[200px] sm:h-[200px]"
+          />
+        </div>
+
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">
             Union Inventory
@@ -29,7 +40,6 @@ export default function Home() {
             🛡️ Admin Dashboard
           </Link>
         </div>
-
       </div>
     </div>
   )

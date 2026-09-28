@@ -73,12 +73,49 @@ export default function AdminDashboardPage() {
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-lg">
               📊
             </div>
-            <h2 className="text-lg font-semibold text-white">Sales & Analytics</h2>
+            <h2 className="text-lg font-semibold text-white">Sales & Analysis</h2>
             <p className="text-xs text-slate-400">
-              Track real-time sales transactions, view revenue reports, and monitor cashier activity
-              logs.
+              Track sales, view general, profit, credit and transaction reports, plus graphic
+              analytics.
             </p>
-            <span className="text-xs text-slate-500 font-medium">Coming Next</span>
+            <div className="flex flex-col gap-1 pt-1">
+              <Link
+                href="/admin/sales"
+                className="text-sm text-amber-400 hover:text-amber-300 hover:underline font-medium"
+              >
+                Open Sales & Analysis →
+              </Link>
+              <Link
+                href="/admin/sales/report"
+                className="text-xs text-slate-400 hover:text-white"
+              >
+                General report
+              </Link>
+              <Link
+                href="/admin/sales/profit"
+                className="text-xs text-slate-400 hover:text-white"
+              >
+                Profit report
+              </Link>
+              <Link
+                href="/admin/sales/credit"
+                className="text-xs text-slate-400 hover:text-white"
+              >
+                Credit report
+              </Link>
+              <Link
+                href="/admin/sales/transactions"
+                className="text-xs text-slate-400 hover:text-white"
+              >
+                Transaction report
+              </Link>
+              <Link
+                href="/admin/sales/graphics"
+                className="text-xs text-slate-400 hover:text-white"
+              >
+                Graphic report
+              </Link>
+            </div>
           </div>
         </div>
       </div>
