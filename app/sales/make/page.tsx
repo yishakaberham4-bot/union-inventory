@@ -30,51 +30,16 @@ export default async function MakeSalePage() {
       </div>
 
       {loadError ? (
-        <div className="rounded-2xl border border-red-800/50 bg-red-950/40 p-5 text-red-200 text-sm space-y-3">
-          <p>{loadError}</p>
-          <p className="text-red-300/80 text-xs">
-            If this mentions a missing table, run the SQL below in Supabase → SQL Editor
-            (products table must exist first).
+        <div className="rounded-2xl border border-red-800/50 bg-red-950/40 p-5 text-red-200 text-sm space-y-2">
+          <p className="font-medium">Unable to load products</p>
+          <p className="text-red-300/90 text-xs">{loadError}</p>
+          <p className="text-red-300/70 text-xs">
+            Please try again or contact your system administrator.
           </p>
         </div>
       ) : (
         <MakeSaleForm products={products} />
       )}
-
-      <details className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-xs text-slate-400">
-        <summary className="cursor-pointer text-slate-300 font-medium">
-          Required SQL (sales table) — run once in Supabase
-        </summary>
-        <pre className="mt-3 overflow-x-auto whitespace-pre-wrap text-[11px] leading-relaxed text-slate-500">
-{`create table if not exists public.sales (
-  id uuid primary key default gen_random_uuid(),
-  product_id uuid references public.products(id) on delete set null,
-  product_name text not null,
-  product_sku text,
-  quantity integer not null check (quantity > 0),
-  unit_price numeric(12,2) not null default 0,
-  unit_cost numeric(12,2) not null default 0,
-  total_amount numeric(12,2) not null default 0,
-  sale_type text not null default 'cash',
-  sold_by uuid,
-  sold_by_email text,
-  created_at timestamptz default now(),
-  -- Credit support (optional columns)
-  credit_customer_name text,
-  credit_phone text,
-  credit_amount numeric(12,2),
-  paid_amount numeric(12,2)
-);
-
--- If sales table already exists, add the credit columns:
--- alter table public.sales add column if not exists credit_customer_name text;
--- alter table public.sales add column if not exists credit_phone text;
--- alter table public.sales add column if not exists credit_amount numeric(12,2);
--- alter table public.sales add column if not exists paid_amount numeric(12,2);
-
-create index if not exists sales_created_at_idx on public.sales (created_at desc);`}
-        </pre>
-      </details>
     </div>
   )
 }

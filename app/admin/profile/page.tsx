@@ -164,9 +164,9 @@ export default function AdminProfilePage() {
         </div>
 
         <div className="p-4 bg-slate-900/50 border border-slate-800 rounded-xl text-xs text-slate-500 space-y-2">
-          <p className="font-medium text-slate-400">One-time Supabase setup</p>
+          <p className="font-medium text-slate-400">Setup note (admins only)</p>
           <p>
-            If upload reports a missing table, run this in the Supabase SQL Editor:
+            If logo upload reports a missing table, run this once in the Supabase SQL Editor:
           </p>
           <pre className="overflow-x-auto p-3 bg-slate-950 rounded-lg text-[11px] text-slate-400 border border-slate-800">
 {`create table if not exists public.app_settings (
@@ -176,7 +176,7 @@ export default function AdminProfilePage() {
 );
 
 -- Storage bucket "assets" is created automatically on first upload.
--- If you prefer to create it manually: Storage → New bucket → name "assets" → Public.`}
+-- Or create manually: Storage → New bucket → name "assets" → Public.`}
           </pre>
         </div>
       </div>

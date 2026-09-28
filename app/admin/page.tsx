@@ -5,8 +5,8 @@ export default function AdminDashboardPage() {
     <div className="p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="pb-6 border-b border-slate-800">
-          <h1 className="text-2xl font-bold text-white">Admin Management Dashboard</h1>
-          <p className="text-slate-400 text-sm">Union Inventory & Shop Management System</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Admin Dashboard</h1>
+          <p className="text-slate-400 text-sm mt-1">Union Inventory · Shop Management System</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

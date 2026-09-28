@@ -50,12 +50,12 @@ export default async function SalesLayout({
     'Sales'
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-slate-800 bg-slate-900/80 sticky top-0 z-10 backdrop-blur">
+    <div className="flex-1 flex flex-col min-h-0 bg-slate-950 text-slate-100">
+      <header className="border-b border-slate-800 bg-slate-900/90 sticky top-0 z-10 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-5">
-            <Link href="/sales/pos" className="font-semibold text-white hover:text-emerald-300">
-              🛍️ Sales Terminal
+          <div className="flex items-center gap-5 min-w-0">
+            <Link href="/sales/pos" className="font-semibold text-white hover:text-emerald-300 shrink-0">
+              Sales Terminal
             </Link>
             <nav className="hidden sm:flex items-center gap-1 text-sm">
               <Link
@@ -71,19 +71,19 @@ export default async function SalesLayout({
                 Report
               </Link>
             </nav>
-            <span className="text-xs text-slate-500">{staffLabel}</span>
+            <span className="text-xs text-slate-500 truncate">{staffLabel}</span>
           </div>
           <form action={logoutSales}>
             <button
               type="submit"
-              className="text-sm px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
+              className="text-sm px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition border border-slate-700"
             >
               Log out
             </button>
           </form>
         </div>
       </header>
-      {children}
+      <div className="flex-1 pb-2">{children}</div>
     </div>
   )
 }

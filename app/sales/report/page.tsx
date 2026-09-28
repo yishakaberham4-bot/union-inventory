@@ -254,10 +254,11 @@ export default async function SalesReportPage({
       )}
 
       {loadError ? (
-        <div className="rounded-2xl border border-red-800/50 bg-red-950/40 p-5 text-red-200 text-sm">
-          {loadError}
-          <p className="text-red-300/80 text-xs mt-2">
-            Create the <code className="text-red-200">sales</code> table in Supabase if it does not exist (SQL is on the Make Sale page).
+        <div className="rounded-2xl border border-red-800/50 bg-red-950/40 p-5 text-red-200 text-sm space-y-2">
+          <p className="font-medium">Unable to load report</p>
+          <p className="text-red-300/90 text-xs">{loadError}</p>
+          <p className="text-red-300/70 text-xs">
+            Please try again or contact your system administrator.
           </p>
         </div>
       ) : (

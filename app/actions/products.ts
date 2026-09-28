@@ -51,7 +51,7 @@ function friendlyError(message: string): string {
     return 'A product with this SKU already exists.'
   }
   if (msg.includes('relation') && msg.includes('does not exist')) {
-    return 'Products table not found. Run the SQL schema in Supabase (see admin/inventory page).'
+    return 'Products table not found. Please contact your system administrator.'
   }
   return message || 'Request failed'
 }

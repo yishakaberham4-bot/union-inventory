@@ -92,34 +92,13 @@ export default async function InventoryPage() {
         </div>
 
         {errorMsg && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-4 rounded-xl space-y-2">
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-4 rounded-xl">
             <p>
-              <strong>Error:</strong> {errorMsg}
+              <strong>Unable to load inventory.</strong> {errorMsg}
             </p>
-            <details className="text-xs text-red-300/90">
-              <summary className="cursor-pointer hover:text-red-200">
-                Show SQL to create the products table
-              </summary>
-              <pre className="mt-2 p-3 bg-slate-950 rounded-lg overflow-x-auto text-[11px] text-slate-300 whitespace-pre-wrap">
-{`create table if not exists public.products (
-  id uuid primary key default gen_random_uuid(),
-  sku text unique not null,
-  name text not null,
-  description text,
-  category text,
-  price numeric(12,2) not null default 0,
-  cost numeric(12,2) default 0,
-  stock_qty integer not null default 0,
-  low_stock_threshold integer not null default 5,
-  is_active boolean default true,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
-);
-
--- Optional: allow service role full access (RLS)
-alter table public.products enable row level security;`}
-              </pre>
-            </details>
+            <p className="text-xs text-red-300/80 mt-2">
+              Please try again or contact your system administrator.
+            </p>
           </div>
         )}
 

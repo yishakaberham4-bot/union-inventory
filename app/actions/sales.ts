@@ -52,10 +52,10 @@ function friendlyError(message: string): string {
     return 'Invalid API key. Use sb_secret_... in SUPABASE_SERVICE_ROLE_KEY.'
   }
   if (msg.includes('relation') && msg.includes('does not exist')) {
-    return 'Sales table not found. Run the sales SQL in Supabase (see Make Sale page).'
+    return 'Sales table not found. Please contact your system administrator.'
   }
   if (msg.includes('column') && msg.includes('does not exist')) {
-    return `Database column mismatch: ${message}. Re-run the sales table SQL.`
+    return `Database configuration issue: ${message}. Please contact your system administrator.`
   }
   if (msg.includes('not-null') || msg.includes('null value')) {
     return `Missing required field: ${message}`
@@ -552,7 +552,7 @@ export async function returnSale(
       if (msg.includes('relation') && msg.includes('does not exist')) {
         return {
           error:
-            'sale_returns table not found. Open General report → show SQL and run it in Supabase, then try again.',
+            'Returns archive is not configured. Please contact your system administrator.',
         }
       }
       // Retry without optional columns

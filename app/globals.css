@@ -12,3 +12,18 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Subtle selection */
+::selection {
+  background: rgb(16 185 129 / 0.35);
+  color: #fff;
+}
+
+/* Smooth focus rings for forms */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 2px solid rgb(16 185 129 / 0.45);
+  outline-offset: 2px;
+}

@@ -5,9 +5,8 @@ export default async function Home() {
   const logoUrl = await getLogoUrl()
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6">
+    <div className="flex-1 flex flex-col items-center justify-center p-6">
       <div className="max-w-md w-full text-center space-y-6">
-        {/* Union logo above title — uploaded from Admin → Profile */}
         <div className="flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -28,19 +27,19 @@ export default async function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 pt-4">
+        <div className="grid grid-cols-1 gap-3 pt-4">
           <Link
             href="/login"
-            className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 font-semibold rounded-xl transition shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2"
+            className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 font-semibold rounded-xl transition shadow-lg shadow-emerald-950/40 flex items-center justify-center gap-2 text-white"
           >
-            🛍️ Sales Terminal Login
+            Sales Terminal Login
           </Link>
 
           <Link
             href="/admin-login"
-            className="w-full py-3.5 px-4 bg-slate-800 hover:bg-slate-700 font-semibold rounded-xl transition border border-slate-700 flex items-center justify-center gap-2"
+            className="w-full py-3.5 px-4 bg-slate-800 hover:bg-slate-700 font-semibold rounded-xl transition border border-slate-700 flex items-center justify-center gap-2 text-slate-100"
           >
-            🛡️ Admin Dashboard
+            Admin Dashboard
           </Link>
         </div>
       </div>
