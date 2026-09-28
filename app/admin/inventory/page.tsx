@@ -2,6 +2,13 @@ import Link from 'next/link'
 import { getProducts } from '@/app/actions/products'
 import { DeleteProductButton } from './delete-button'
 
+function formatMoney(n: number) {
+  return n.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
 export default async function InventoryPage() {
   let products: Awaited<ReturnType<typeof getProducts>> = []
   let errorMsg: string | null = null
@@ -15,6 +22,16 @@ export default async function InventoryPage() {
   const lowCount = products.filter(
     (p) => p.stock_qty <= p.low_stock_threshold
   ).length
+
+  const totalStockQty = products.reduce((sum, p) => sum + (p.stock_qty || 0), 0)
+  const totalInventoryValue = products.reduce(
+    (sum, p) => sum + (p.price || 0) * (p.stock_qty || 0),
+    0
+  )
+  const totalCostValue = products.reduce(
+    (sum, p) => sum + (Number(p.cost) || 0) * (p.stock_qty || 0),
+    0
+  )
 
   return (
     <div className="p-6">
@@ -74,29 +91,28 @@ export default async function InventoryPage() {
           </Link>
           <Link
             href="/admin/inventory/alerts"
-            className="p-4 bg-slate-900 border border-slate-800 rounded-2xl hover:border-red-500/40 transition group relative"
+            className="p-4 bg-slate-900 border border-slate-800 rounded-2xl hover:border-red-500/40 transition group"
           >
-            <div className="text-2xl mb-2">🔔</div>
+            <div className="text-2xl mb-2">⚠️</div>
             <h3 className="font-semibold text-white group-hover:text-red-400">
               Low stock alerts
+              {lowCount > 0 && (
+                <span className="ml-2 text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">
+                  {lowCount}
+                </span>
+              )}
             </h3>
             <p className="text-xs text-slate-500 mt-1">
               Products at or below threshold
             </p>
-            {lowCount > 0 && (
-              <span className="absolute top-3 right-3 min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold">
-                {lowCount}
-              </span>
-            )}
           </Link>
         </div>
 
         {errorMsg && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-4 rounded-xl">
-            <p>
-              <strong>Unable to load inventory.</strong> {errorMsg}
-            </p>
-            <p className="text-xs text-red-300/80 mt-2">
+          <div className="rounded-xl border border-red-800/60 bg-red-950/40 px-4 py-3 text-sm text-red-200">
+            <p className="font-medium">Could not load products</p>
+            <p className="text-red-300/80 mt-0.5">{errorMsg}</p>
+            <p className="text-red-300/60 text-xs mt-1">
               Please try again or contact your system administrator.
             </p>
           </div>
@@ -142,7 +158,7 @@ export default async function InventoryPage() {
                         <td className="px-6 py-3 text-white">{p.name}</td>
                         <td className="px-6 py-3 text-slate-400">{p.category || '—'}</td>
                         <td className="px-6 py-3 text-right text-white">
-                          {p.price.toFixed(2)}
+                          {formatMoney(p.price)}
                         </td>
                         <td className="px-6 py-3 text-right">
                           <span
@@ -181,6 +197,39 @@ export default async function InventoryPage() {
                   })
                 )}
               </tbody>
+              {products.length > 0 && (
+                <tfoot className="bg-slate-950/80 border-t-2 border-slate-700">
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="px-6 py-4 text-slate-300 font-semibold"
+                    >
+                      Total ({products.length} products)
+                    </td>
+                    <td className="px-6 py-4 text-right text-slate-400 text-xs">
+                      —
+                    </td>
+                    <td className="px-6 py-4 text-right text-white font-semibold">
+                      {totalStockQty.toLocaleString()}
+                    </td>
+                    <td colSpan={2} className="px-6 py-4 text-right">
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className="text-emerald-400 font-bold text-base">
+                          {formatMoney(totalInventoryValue)}
+                        </span>
+                        <span className="text-[11px] text-slate-500">
+                          Total stock value (price × qty)
+                        </span>
+                        {totalCostValue > 0 && (
+                          <span className="text-[11px] text-slate-500">
+                            Cost value: {formatMoney(totalCostValue)}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         </div>

@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import SiteFooter from "./components/site-footer";
+import PwaRegister from "./components/pwa-register";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,6 +30,13 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#020617",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,6 +47,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.className} antialiased bg-slate-950 text-slate-100 min-h-screen flex flex-col`}
       >
+        <PwaRegister />
         <div className="flex-1 flex flex-col min-h-0">{children}</div>
         <SiteFooter />
       </body>
