@@ -39,6 +39,12 @@ export default async function AdminSalesPage() {
       icon: '💳',
     },
     {
+      href: '/admin/sales/debit',
+      title: 'Debit',
+      desc: 'Credit purchases with pay button and balances',
+      icon: '📥',
+    },
+    {
       href: '/admin/sales/transactions',
       title: 'Transaction report',
       desc: 'Detailed line-by-line transaction log',

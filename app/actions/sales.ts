@@ -648,3 +648,112 @@ export async function getReturnedSales(limit = 500): Promise<ReturnedSaleRow[]> 
     reason: row.reason ?? null,
   }))
 }
+
+/**
+ * Pay off outstanding credit on a sale.
+ * Requires the current admin user's password for confirmation.
+ */
+export async function payCreditSale(
+  saleId: string,
+  adminPassword: string
+): Promise<{ success?: boolean; message?: string; error?: string }> {
+  try {
+    if (!saleId) return { error: 'Sale ID is required' }
+    if (!adminPassword || !String(adminPassword).trim()) {
+      return { error: 'Admin password is required' }
+    }
+
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { error: 'You must be logged in as admin' }
+
+    // Confirm caller is admin
+    const metaRole = (user.user_metadata?.role as string) || ''
+    let dbRole = ''
+    try {
+      const { data: row } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+      dbRole = row?.role || ''
+    } catch {
+      // ignore
+    }
+    const isAdmin = metaRole === 'admin' || dbRole === 'admin'
+    if (!isAdmin) {
+      return { error: 'Only admins can mark credit as paid' }
+    }
+
+    // Re-verify password for this admin account
+    const email = user.email
+    if (!email) return { error: 'Admin account has no email' }
+    const { error: authErr } = await supabase.auth.signInWithPassword({
+      email,
+      password: String(adminPassword),
+    })
+    if (authErr) {
+      return { error: 'Invalid admin password' }
+    }
+
+    const admin = getAdminClient()
+    const { data: sale, error: fetchErr } = await admin
+      .from('sales')
+      .select('*')
+      .eq('id', saleId)
+      .maybeSingle()
+
+    if (fetchErr) return { error: friendlyError(fetchErr.message) }
+    if (!sale) return { error: 'Sale not found' }
+
+    const saleType = String(sale.sale_type || '')
+    if (!saleType.startsWith('credit')) {
+      return { error: 'This sale is not a credit sale' }
+    }
+
+    const totalAmount =
+      Number(sale.total_amount ?? sale.total_price ?? 0) || 0
+    const creditAmt =
+      sale.credit_amount != null ? Number(sale.credit_amount) : totalAmount
+    const paidSoFar = Number(sale.paid_amount || 0)
+    const outstanding = Math.max(0, creditAmt - paidSoFar)
+    if (outstanding <= 0) {
+      return { error: 'This credit is already fully paid' }
+    }
+
+    // Mark fully paid: paid_amount covers the credit portion
+    const newPaid = Number((paidSoFar + outstanding).toFixed(2))
+    const { error: updErr } = await admin
+      .from('sales')
+      .update({ paid_amount: newPaid })
+      .eq('id', saleId)
+
+    if (updErr) {
+      // Column might not exist on older schemas
+      const msg = (updErr.message || '').toLowerCase()
+      if (msg.includes('column') || msg.includes('schema')) {
+        return {
+          error:
+            'Database is missing paid_amount column. Run the credit sales migration first.',
+        }
+      }
+      return { error: friendlyError(updErr.message) }
+    }
+
+    revalidatePath('/admin/sales/debit')
+    revalidatePath('/admin/sales/credit')
+    revalidatePath('/admin/sales/report')
+    revalidatePath('/admin/sales')
+
+    return {
+      success: true,
+      message: `Credit of ${outstanding.toFixed(2)} marked as paid`,
+    }
+  } catch (e) {
+    return {
+      error: e instanceof Error ? e.message : 'Failed to pay credit',
+    }
+  }
+}

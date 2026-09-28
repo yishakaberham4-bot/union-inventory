@@ -316,6 +316,23 @@ export default async function AdminGeneralReportPage({
                   </tr>
                 )}
               </tbody>
+              {sales.length > 0 && (
+                <tfoot className="bg-slate-900/90 border-t border-slate-700">
+                  <tr>
+                    <td className="px-3 py-3 text-slate-300 font-semibold" colSpan={2}>
+                      Total (all products)
+                    </td>
+                    <td className="px-3 py-3 text-right text-white font-semibold">
+                      {qty}
+                    </td>
+                    <td className="px-3 py-3 text-right text-slate-500">—</td>
+                    <td className="px-3 py-3 text-right text-emerald-400 font-semibold">
+                      {formatMoney(revenue)}
+                    </td>
+                    <td className="px-3 py-3" colSpan={3} />
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         </>

@@ -29,6 +29,7 @@ const navItems = [
       { href: '/admin/sales/report', label: 'General report' },
       { href: '/admin/sales/profit', label: 'Profit report' },
       { href: '/admin/sales/credit', label: 'Credit report' },
+      { href: '/admin/sales/debit', label: 'Debit' },
       { href: '/admin/sales/transactions', label: 'Transaction report' },
       { href: '/admin/sales/graphics', label: 'Graphic report' },
     ],
