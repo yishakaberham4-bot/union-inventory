@@ -7,6 +7,7 @@ import { logoutAdmin } from '@/app/actions/auth'
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: '🏠' },
+  { href: '/admin/profile', label: 'Profile', icon: '👤' },
   { href: '/admin/users', label: 'Users', icon: '👥' },
   {
     href: '/admin/inventory',
