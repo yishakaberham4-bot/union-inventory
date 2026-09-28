@@ -17,6 +17,13 @@ export interface Product {
   is_active?: boolean | null
   created_at?: string
   updated_at?: string
+  /** How this stock was purchased: cash | credit */
+  purchase_type?: string | null
+  supplier_name?: string | null
+  supplier_phone?: string | null
+  /** Outstanding amount owed for credit purchase (cost * qty at add time) */
+  purchase_credit_amount?: number | null
+  purchase_paid_amount?: number | null
 }
 
 function getAdminClient() {
@@ -115,6 +122,17 @@ function mapProduct(row: any): Product {
     is_active: row.is_active !== false,
     created_at: row.created_at,
     updated_at: row.updated_at,
+    purchase_type: row.purchase_type ?? null,
+    supplier_name: row.supplier_name ?? null,
+    supplier_phone: row.supplier_phone ?? null,
+    purchase_credit_amount:
+      row.purchase_credit_amount != null
+        ? Number(row.purchase_credit_amount)
+        : null,
+    purchase_paid_amount:
+      row.purchase_paid_amount != null
+        ? Number(row.purchase_paid_amount)
+        : null,
   }
 }
 
@@ -130,6 +148,12 @@ export async function createProduct(formData: FormData) {
     String(formData.get('low_stock_threshold') || '5'),
     10
   )
+  const purchaseTypeRaw = String(formData.get('purchase_type') || 'cash')
+    .trim()
+    .toLowerCase()
+  const purchaseType = purchaseTypeRaw === 'credit' ? 'credit' : 'cash'
+  const supplierName = String(formData.get('supplier_name') || '').trim() || null
+  const supplierPhone = String(formData.get('supplier_phone') || '').trim() || null
 
   if (!sku || !name) {
     return { error: 'SKU and product name are required' }
@@ -140,23 +164,51 @@ export async function createProduct(formData: FormData) {
   if (isNaN(stock_qty) || stock_qty < 0) {
     return { error: 'Stock quantity must be a valid number ≥ 0' }
   }
+  if (purchaseType === 'credit' && stock_qty < 1) {
+    return { error: 'Credit purchase requires stock quantity ≥ 1' }
+  }
+
+  const costVal = isNaN(cost) ? 0 : cost
+  const purchaseCreditAmount =
+    purchaseType === 'credit'
+      ? Number((costVal * stock_qty).toFixed(2))
+      : 0
+  const purchasePaidAmount = 0
 
   const admin = getAdminClient()
-  const { error } = await admin.from('products').insert({
+  const basePayload: Record<string, unknown> = {
     sku,
     name,
     description,
     category,
     price,
-    cost: isNaN(cost) ? 0 : cost,
+    cost: costVal,
     stock_qty,
     low_stock_threshold: isNaN(low_stock_threshold) ? 5 : low_stock_threshold,
     is_active: true,
-  })
+  }
+  const fullPayload = {
+    ...basePayload,
+    purchase_type: purchaseType,
+    supplier_name: supplierName,
+    supplier_phone: supplierPhone,
+    purchase_credit_amount: purchaseCreditAmount,
+    purchase_paid_amount: purchasePaidAmount,
+  }
+
+  let { error } = await admin.from('products').insert(fullPayload)
+  // Retry without purchase columns if schema does not have them yet
+  if (error) {
+    const msg = (error.message || '').toLowerCase()
+    if (msg.includes('column') || msg.includes('schema')) {
+      ;({ error } = await admin.from('products').insert(basePayload))
+    }
+  }
 
   if (error) return { error: friendlyError(error.message) }
 
   revalidateInventory()
+  revalidatePath('/admin/sales/debit')
   redirect('/admin/inventory')
 }
 
@@ -299,4 +351,127 @@ export async function deleteProduct(formData: FormData) {
 
   revalidateInventory()
   redirect('/admin/inventory')
+}
+
+/** Products purchased on credit with outstanding balance */
+export async function getCreditPurchases(): Promise<Product[]> {
+  const admin = getAdminClient()
+  const { data, error } = await admin
+    .from('products')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    const msg = (error.message || '').toLowerCase()
+    if (msg.includes('column') || msg.includes('schema')) {
+      return []
+    }
+    throw new Error(friendlyError(error.message))
+  }
+
+  return (data || [])
+    .map(mapProduct)
+    .filter((p) => {
+      if ((p.purchase_type || '').toLowerCase() !== 'credit') return false
+      const credit = p.purchase_credit_amount ?? 0
+      const paid = p.purchase_paid_amount ?? 0
+      return credit - paid > 0.001
+    })
+}
+
+/**
+ * Mark a credit product purchase as paid.
+ * Requires the current admin user's password.
+ */
+export async function payProductCredit(
+  productId: string,
+  adminPassword: string
+): Promise<{ success?: boolean; message?: string; error?: string }> {
+  try {
+    if (!productId) return { error: 'Product ID is required' }
+    if (!adminPassword || !String(adminPassword).trim()) {
+      return { error: 'Admin password is required' }
+    }
+
+    const { createClient } = await import('@/lib/supabase/server')
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { error: 'You must be logged in as admin' }
+
+    const metaRole = (user.user_metadata?.role as string) || ''
+    let dbRole = ''
+    try {
+      const { data: row } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+      dbRole = row?.role || ''
+    } catch {
+      // ignore
+    }
+    if (metaRole !== 'admin' && dbRole !== 'admin') {
+      return { error: 'Only admins can mark purchase credit as paid' }
+    }
+
+    const email = user.email
+    if (!email) return { error: 'Admin account has no email' }
+    const { error: authErr } = await supabase.auth.signInWithPassword({
+      email,
+      password: String(adminPassword),
+    })
+    if (authErr) return { error: 'Invalid admin password' }
+
+    const admin = getAdminClient()
+    const { data: product, error: fetchErr } = await admin
+      .from('products')
+      .select('*')
+      .eq('id', productId)
+      .maybeSingle()
+
+    if (fetchErr) return { error: friendlyError(fetchErr.message) }
+    if (!product) return { error: 'Product not found' }
+    if ((product.purchase_type || '').toLowerCase() !== 'credit') {
+      return { error: 'This product was not purchased on credit' }
+    }
+
+    const creditAmt = Number(product.purchase_credit_amount || 0)
+    const paidSoFar = Number(product.purchase_paid_amount || 0)
+    const outstanding = Math.max(0, creditAmt - paidSoFar)
+    if (outstanding <= 0) {
+      return { error: 'This purchase credit is already fully paid' }
+    }
+
+    const { error: updErr } = await admin
+      .from('products')
+      .update({
+        purchase_paid_amount: creditAmt,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', productId)
+
+    if (updErr) {
+      const msg = (updErr.message || '').toLowerCase()
+      if (msg.includes('column') || msg.includes('schema')) {
+        return {
+          error:
+            'Database is missing purchase credit columns. Run the SQL migration first.',
+        }
+      }
+      return { error: friendlyError(updErr.message) }
+    }
+
+    revalidateInventory()
+    revalidatePath('/admin/sales/debit')
+    return {
+      success: true,
+      message: `Purchase credit of ${outstanding.toFixed(2)} marked as paid`,
+    }
+  } catch (e) {
+    return {
+      error: e instanceof Error ? e.message : 'Failed to pay purchase credit',
+    }
+  }
 }

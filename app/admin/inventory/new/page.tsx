@@ -7,12 +7,14 @@ import { createProduct } from '@/app/actions/products'
 export default function NewProductPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [purchaseType, setPurchaseType] = useState<'cash' | 'credit'>('cash')
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)
     setError(null)
     const formData = new FormData(e.currentTarget)
+    formData.set('purchase_type', purchaseType)
     const result = await createProduct(formData)
     if (result?.error) {
       setError(result.error)
@@ -127,6 +129,54 @@ export default function NewProductPage() {
               />
             </div>
           </div>
+
+          {/* Payment type: Cash or Credit (for stock purchase) */}
+          <div>
+            <label className="block text-sm text-slate-300 mb-1.5">
+              Payment type <span className="text-red-400">*</span>
+            </label>
+            <select
+              value={purchaseType}
+              onChange={(e) => setPurchaseType(e.target.value as 'cash' | 'credit')}
+              disabled={loading}
+              className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="cash">Cash</option>
+              <option value="credit">Credit</option>
+            </select>
+            <p className="text-xs text-slate-500 mt-1">
+              How you paid the supplier for this stock. Credit items appear on the Debit page.
+            </p>
+          </div>
+
+          {purchaseType === 'credit' && (
+            <div className="rounded-xl border border-amber-800/40 bg-amber-950/20 p-4 space-y-3">
+              <p className="text-sm text-amber-200 font-medium">Credit purchase details</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">Supplier name</label>
+                  <input
+                    name="supplier_name"
+                    placeholder="Supplier / vendor"
+                    disabled={loading}
+                    className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-300 mb-1">Supplier phone</label>
+                  <input
+                    name="supplier_phone"
+                    placeholder="Phone number"
+                    disabled={loading}
+                    className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">
+                Outstanding = cost × stock qty. You can mark it paid later on Debit (admin password).
+              </p>
+            </div>
+          )}
 
           <button
             type="submit"
