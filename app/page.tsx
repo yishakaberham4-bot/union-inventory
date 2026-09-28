@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 
 export default function Home() {
@@ -6,13 +7,13 @@ export default function Home() {
       <div className="max-w-md w-full text-center space-y-6">
         {/* Union logo above title */}
         <div className="flex justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src="/logo.png"
             alt="Union Computers & Software"
             width={200}
             height={200}
-            className="object-contain drop-shadow-lg w-[180px] h-[180px] sm:w-[200px] sm:h-[200px]"
+            priority
+            className="object-contain drop-shadow-lg w-44 h-44 sm:w-52 sm:h-52"
           />
         </div>
 
@@ -28,14 +29,14 @@ export default function Home() {
         <div className="grid grid-cols-1 gap-4 pt-4">
           <Link
             href="/login"
-            className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 font-semibold rounded-xl transition shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2"
+            className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 font-semibold rounded-xl transition shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 text-white"
           >
             🛍️ Sales Terminal Login
           </Link>
 
           <Link
             href="/admin-login"
-            className="w-full py-3.5 px-4 bg-slate-800 hover:bg-slate-700 font-semibold rounded-xl transition border border-slate-700 flex items-center justify-center gap-2"
+            className="w-full py-3.5 px-4 bg-slate-800 hover:bg-slate-700 font-semibold rounded-xl transition border border-slate-700 flex items-center justify-center gap-2 text-slate-200"
           >
             🛡️ Admin Dashboard
           </Link>
