@@ -1,19 +1,21 @@
-import Image from 'next/image'
 import Link from 'next/link'
+import { getLogoUrl } from '@/app/actions/settings'
 
-export default function Home() {
+export default async function Home() {
+  const logoUrl = await getLogoUrl()
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6">
       <div className="max-w-md w-full text-center space-y-6">
-        {/* Union logo above title */}
+        {/* Union logo above title — uploaded from Admin → Profile */}
         <div className="flex justify-center">
-          <Image
-            src="/logo.png"
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logoUrl}
             alt="Union Computers & Software"
             width={200}
             height={200}
-            priority
-            className="object-contain drop-shadow-lg w-44 h-44 sm:w-52 sm:h-52"
+            className="object-contain drop-shadow-lg w-[180px] h-[180px] sm:w-[200px] sm:h-[200px]"
           />
         </div>
 
@@ -29,14 +31,14 @@ export default function Home() {
         <div className="grid grid-cols-1 gap-4 pt-4">
           <Link
             href="/login"
-            className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 font-semibold rounded-xl transition shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 text-white"
+            className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 font-semibold rounded-xl transition shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2"
           >
             🛍️ Sales Terminal Login
           </Link>
 
           <Link
             href="/admin-login"
-            className="w-full py-3.5 px-4 bg-slate-800 hover:bg-slate-700 font-semibold rounded-xl transition border border-slate-700 flex items-center justify-center gap-2 text-slate-200"
+            className="w-full py-3.5 px-4 bg-slate-800 hover:bg-slate-700 font-semibold rounded-xl transition border border-slate-700 flex items-center justify-center gap-2"
           >
             🛡️ Admin Dashboard
           </Link>
