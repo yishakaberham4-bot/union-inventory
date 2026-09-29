@@ -558,13 +558,13 @@ async function logStockMovement(
   }
 }
 
-/** Stock report: added stock (and other movements) by date range */
+/** Stock report: movements by date range. Returns empty + missingTable if table not created yet. */
 export async function getStockMovements(opts?: {
   from?: string | null
   to?: string | null
   mode?: string | null
   limit?: number
-}): Promise<StockMovement[]> {
+}): Promise<{ rows: StockMovement[]; missingTable: boolean }> {
   const admin = getAdminClient()
   let q = admin
     .from('stock_movements')
@@ -577,7 +577,6 @@ export async function getStockMovements(opts?: {
     q = q.gte('created_at', start)
   }
   if (opts?.to) {
-    // inclusive end of day
     const end = opts.to.length === 10 ? opts.to + 'T23:59:59.999Z' : opts.to
     q = q.lte('created_at', end)
   }
@@ -588,23 +587,55 @@ export async function getStockMovements(opts?: {
   const { data, error } = await q
   if (error) {
     const msg = (error.message || '').toLowerCase()
-    if (msg.includes('relation') || msg.includes('does not exist') || msg.includes('schema cache')) {
-      throw new Error(
-        'Stock movements table is missing. In Supabase SQL editor run: CREATE TABLE IF NOT EXISTS stock_movements (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), product_id uuid, product_name text, product_sku text, mode text, amount int, previous_qty int, new_qty int, created_at timestamptz DEFAULT now());'
-      )
+    if (
+      msg.includes('relation') ||
+      msg.includes('does not exist') ||
+      msg.includes('schema cache') ||
+      msg.includes('could not find')
+    ) {
+      return { rows: [], missingTable: true }
     }
     throw new Error(friendlyError(error.message))
   }
 
-  return (data || []).map((row: Record<string, unknown>) => ({
-    id: String(row.id),
-    product_id: String(row.product_id || ''),
-    product_name: String(row.product_name || ''),
-    product_sku: String(row.product_sku || ''),
-    mode: String(row.mode || ''),
-    amount: Number(row.amount) || 0,
-    previous_qty: Number(row.previous_qty) || 0,
-    new_qty: Number(row.new_qty) || 0,
-    created_at: String(row.created_at || ''),
-  }))
+  return {
+    missingTable: false,
+    rows: (data || []).map((row: Record<string, unknown>) => ({
+      id: String(row.id),
+      product_id: String(row.product_id || ''),
+      product_name: String(row.product_name || ''),
+      product_sku: String(row.product_sku || ''),
+      mode: String(row.mode || ''),
+      amount: Number(row.amount) || 0,
+      previous_qty: Number(row.previous_qty) || 0,
+      new_qty: Number(row.new_qty) || 0,
+      created_at: String(row.created_at || ''),
+    })),
+  }
+}
+
+/** Products created in a date range (new products added to inventory) */
+export async function getProductsCreatedInRange(opts?: {
+  from?: string | null
+  to?: string | null
+}): Promise<Product[]> {
+  const admin = getAdminClient()
+  let q = admin
+    .from('products')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(5000)
+
+  if (opts?.from) {
+    const start = opts.from.length === 10 ? opts.from + 'T00:00:00.000Z' : opts.from
+    q = q.gte('created_at', start)
+  }
+  if (opts?.to) {
+    const end = opts.to.length === 10 ? opts.to + 'T23:59:59.999Z' : opts.to
+    q = q.lte('created_at', end)
+  }
+
+  const { data, error } = await q
+  if (error) throw new Error(friendlyError(error.message))
+  return (data || []).map(mapProduct)
 }
