@@ -207,7 +207,30 @@ export async function createProduct(formData: FormData) {
 
   if (error) return { error: friendlyError(error.message) }
 
+  // Log initial stock as an "add" movement when qty > 0
+  if (stock_qty > 0) {
+    const { data: created } = await admin
+      .from('products')
+      .select('id')
+      .eq('sku', sku)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (created?.id) {
+      await logStockMovement(admin, {
+        product_id: created.id,
+        product_name: name,
+        product_sku: sku,
+        mode: 'initial',
+        amount: stock_qty,
+        previous_qty: 0,
+        new_qty: stock_qty,
+      })
+    }
+  }
+
   revalidateInventory()
+  revalidatePath('/admin/inventory/stock/report')
   revalidatePath('/admin/sales/debit')
   redirect('/admin/inventory')
 }
@@ -264,14 +287,15 @@ export async function adjustStock(formData: FormData) {
   const admin = getAdminClient()
   const { data: product, error: fetchErr } = await admin
     .from('products')
-    .select('stock_qty')
+    .select('id, sku, name, stock_qty')
     .eq('id', id)
     .maybeSingle()
 
   if (fetchErr) return { error: friendlyError(fetchErr.message) }
   if (!product) return { error: 'Product not found' }
 
-  let newQty = Number(product.stock_qty) || 0
+  const previousQty = Number(product.stock_qty) || 0
+  let newQty = previousQty
   if (mode === 'add') newQty += amount
   else if (mode === 'remove') newQty = Math.max(0, newQty - amount)
   else newQty = amount
@@ -283,7 +307,21 @@ export async function adjustStock(formData: FormData) {
 
   if (error) return { error: friendlyError(error.message) }
 
+  // Log movement (ignore if stock_movements table is missing)
+  const delta =
+    mode === 'add' ? amount : mode === 'remove' ? -Math.min(amount, previousQty) : newQty - previousQty
+  await logStockMovement(admin, {
+    product_id: id,
+    product_name: product.name || '',
+    product_sku: product.sku || '',
+    mode: mode === 'set' ? 'set' : mode === 'add' ? 'add' : 'remove',
+    amount: Math.abs(delta),
+    previous_qty: previousQty,
+    new_qty: newQty,
+  })
+
   revalidateInventory()
+  revalidatePath('/admin/inventory/stock/report')
   return { success: true, stock_qty: newQty }
 }
 
@@ -474,4 +512,99 @@ export async function payProductCredit(
       error: e instanceof Error ? e.message : 'Failed to pay purchase credit',
     }
   }
+}
+
+export type StockMovement = {
+  id: string
+  product_id: string
+  product_name: string
+  product_sku: string
+  mode: string
+  amount: number
+  previous_qty: number
+  new_qty: number
+  created_at: string
+}
+
+async function logStockMovement(
+  admin: ReturnType<typeof getAdminClient>,
+  row: {
+    product_id: string
+    product_name: string
+    product_sku: string
+    mode: string
+    amount: number
+    previous_qty: number
+    new_qty: number
+  }
+) {
+  try {
+    const { error } = await admin.from('stock_movements').insert({
+      product_id: row.product_id,
+      product_name: row.product_name,
+      product_sku: row.product_sku,
+      mode: row.mode,
+      amount: row.amount,
+      previous_qty: row.previous_qty,
+      new_qty: row.new_qty,
+      created_at: new Date().toISOString(),
+    })
+    if (error) {
+      // Table may not exist yet — do not fail the stock adjustment
+      console.error('stock_movements log skipped:', error.message)
+    }
+  } catch (e) {
+    console.error('stock_movements log error:', e)
+  }
+}
+
+/** Stock report: added stock (and other movements) by date range */
+export async function getStockMovements(opts?: {
+  from?: string | null
+  to?: string | null
+  mode?: string | null
+  limit?: number
+}): Promise<StockMovement[]> {
+  const admin = getAdminClient()
+  let q = admin
+    .from('stock_movements')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(opts?.limit ?? 5000)
+
+  if (opts?.from) {
+    const start = opts.from.length === 10 ? opts.from + 'T00:00:00.000Z' : opts.from
+    q = q.gte('created_at', start)
+  }
+  if (opts?.to) {
+    // inclusive end of day
+    const end = opts.to.length === 10 ? opts.to + 'T23:59:59.999Z' : opts.to
+    q = q.lte('created_at', end)
+  }
+  if (opts?.mode && opts.mode !== 'all') {
+    q = q.eq('mode', opts.mode)
+  }
+
+  const { data, error } = await q
+  if (error) {
+    const msg = (error.message || '').toLowerCase()
+    if (msg.includes('relation') || msg.includes('does not exist') || msg.includes('schema cache')) {
+      throw new Error(
+        'Stock movements table is missing. In Supabase SQL editor run: CREATE TABLE IF NOT EXISTS stock_movements (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), product_id uuid, product_name text, product_sku text, mode text, amount int, previous_qty int, new_qty int, created_at timestamptz DEFAULT now());'
+      )
+    }
+    throw new Error(friendlyError(error.message))
+  }
+
+  return (data || []).map((row: Record<string, unknown>) => ({
+    id: String(row.id),
+    product_id: String(row.product_id || ''),
+    product_name: String(row.product_name || ''),
+    product_sku: String(row.product_sku || ''),
+    mode: String(row.mode || ''),
+    amount: Number(row.amount) || 0,
+    previous_qty: Number(row.previous_qty) || 0,
+    new_qty: Number(row.new_qty) || 0,
+    created_at: String(row.created_at || ''),
+  }))
 }

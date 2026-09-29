@@ -15,14 +15,22 @@ export default async function StockPage() {
   return (
     <div className="p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div>
-          <Link href="/admin/inventory" className="text-slate-400 hover:text-white text-sm">
-            ← Inventory
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <Link href="/admin/inventory" className="text-slate-400 hover:text-white text-sm">
+              ← Inventory
+            </Link>
+            <h1 className="text-2xl font-bold text-white mt-1">Adjust stock levels</h1>
+            <p className="text-slate-400 text-sm">
+              Set absolute stock, or add / remove units for each product
+            </p>
+          </div>
+          <Link
+            href="/admin/inventory/stock/report"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition shadow-lg shadow-blue-950/40 shrink-0"
+          >
+            📊 Stock report
           </Link>
-          <h1 className="text-2xl font-bold text-white mt-1">Adjust stock levels</h1>
-          <p className="text-slate-400 text-sm">
-            Set absolute stock, or add / remove units for each product
-          </p>
         </div>
 
         {errorMsg && (
