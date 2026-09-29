@@ -107,6 +107,9 @@ export default async function StockReportPage({
   )
   const existingAdds = movements.filter((r) => r.mode === 'add')
   const totalAddedToExisting = existingAdds.reduce((s, r) => s + r.amount, 0)
+  const totalStockAdded =
+    totalInitialFromNewProducts + totalAddedToExisting
+  const netStockChange = totalStockAdded - totalRemoved
 
   const rangeLabel =
     sp.from && sp.to
@@ -415,6 +418,62 @@ export default async function StockReportPage({
                   </div>
                 </div>
               )}
+
+            {/* Grand total summary */}
+            <div className="rounded-xl border border-slate-700 bg-slate-900/80 overflow-hidden">
+              <div className="px-4 py-3 border-b border-slate-700 bg-slate-950/80">
+                <h2 className="text-sm font-semibold text-white">
+                  Total summary
+                </h2>
+              </div>
+              <div className="px-4 py-4 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">
+                    Initial stock from new products
+                  </span>
+                  <span className="font-medium text-emerald-400">
+                    +{totalInitialFromNewProducts.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">
+                    Added to existing products
+                  </span>
+                  <span className="font-medium text-blue-400">
+                    +{totalAddedToExisting.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Removed</span>
+                  <span className="font-medium text-red-400">
+                    −{totalRemoved.toLocaleString()}
+                  </span>
+                </div>
+                <div className="border-t border-slate-700 pt-3 mt-2 flex items-center justify-between">
+                  <span className="font-semibold text-white">
+                    Total stock added
+                  </span>
+                  <span className="text-lg font-bold text-emerald-400">
+                    +{totalStockAdded.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-white">
+                    Net stock change
+                  </span>
+                  <span
+                    className={`text-lg font-bold ${
+                      netStockChange >= 0
+                        ? 'text-emerald-400'
+                        : 'text-red-400'
+                    }`}
+                  >
+                    {netStockChange >= 0 ? '+' : '−'}
+                    {Math.abs(netStockChange).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
           </>
         )}
       </div>
