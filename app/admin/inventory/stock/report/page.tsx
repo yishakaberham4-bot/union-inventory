@@ -150,38 +150,6 @@ export default async function StockReportPage({
           </div>
         )}
 
-        {missingTable && hasRange && (
-          <div className="rounded-xl border border-amber-700/50 bg-amber-950/30 px-4 py-3 text-sm text-amber-100 space-y-2">
-            <p className="font-medium">
-              Optional: enable full stock history (add/remove on existing products)
-            </p>
-            <p className="text-amber-200/80 text-xs">
-              New products by date already work below. To also track stock you{' '}
-              <strong>add later</strong> to existing products, run this once in{' '}
-              <strong>Supabase → SQL Editor</strong>:
-            </p>
-            <pre className="text-[11px] bg-slate-950/80 border border-slate-800 rounded-lg p-3 overflow-x-auto text-slate-300 whitespace-pre-wrap">
-{`CREATE TABLE IF NOT EXISTS stock_movements (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  product_id uuid,
-  product_name text,
-  product_sku text,
-  mode text NOT NULL,
-  amount int NOT NULL DEFAULT 0,
-  previous_qty int NOT NULL DEFAULT 0,
-  new_qty int NOT NULL DEFAULT 0,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS stock_movements_created_at_idx
-  ON stock_movements (created_at DESC);`}
-            </pre>
-            <p className="text-amber-200/70 text-xs">
-              After creating the table, use <strong>Adjust stock → Add</strong> for
-              new entries to appear in “Stock added to existing products”.
-            </p>
-          </div>
-        )}
-
         {!hasRange && !error && (
           <div className="rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-10 text-center text-slate-500 text-sm">
             Choose a date range (Today / This month / custom) and click{' '}
@@ -360,9 +328,7 @@ CREATE INDEX IF NOT EXISTS stock_movements_created_at_idx
                           colSpan={5}
                           className="px-4 py-8 text-center text-slate-500"
                         >
-                          {missingTable
-                            ? 'Create the stock_movements table (SQL above), then use Adjust stock → Add to record entries.'
-                            : 'No stock was added to existing products in this period.'}
+                          No stock was added to existing products in this period.
                         </td>
                       </tr>
                     )}
