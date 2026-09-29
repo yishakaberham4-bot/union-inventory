@@ -162,6 +162,7 @@ export async function createSale(formData: FormData) {
       .trim()
       .toLowerCase()
     const paidHalfBank = String(formData.get('paid_half_bank') || '').trim()
+    const reason = String(formData.get('reason') || '').trim()
 
     if (!productId) return { error: 'Please select a product' }
     if (isNaN(quantity) || quantity < 1) {
@@ -294,6 +295,11 @@ export async function createSale(formData: FormData) {
       basePayload.credit_phone = creditPhone
       basePayload.credit_amount = creditAmount
       basePayload.paid_amount = paidAmount
+    }
+
+    if (reason) {
+      basePayload.reason = reason
+      basePayload.notes = reason
     }
 
     const saleErr = await insertSaleRow(admin, basePayload)

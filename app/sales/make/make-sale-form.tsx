@@ -31,6 +31,9 @@ type CreditMode = 'full' | 'two'
 export default function MakeSaleForm({ products }: { products: ProductOption[] }) {
   const router = useRouter()
   const [productId, setProductId] = useState('')
+  const [productSearch, setProductSearch] = useState('')
+  const [productMenuOpen, setProductMenuOpen] = useState(false)
+  const [reason, setReason] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [sellingPrice, setSellingPrice] = useState('')
   const [saleType, setSaleType] = useState<SaleType>('cash')
@@ -52,6 +55,16 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
     [products, productId]
   )
 
+  const filteredProducts = useMemo(() => {
+    const q = productSearch.trim().toLowerCase()
+    if (!q) return products
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.sku.toLowerCase().includes(q)
+    )
+  }, [products, productSearch])
+
   useEffect(() => {
     if (selected) {
       setSellingPrice(String(selected.price))
@@ -68,6 +81,9 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
 
   function resetForm() {
     setProductId('')
+    setProductSearch('')
+    setProductMenuOpen(false)
+    setReason('')
     setQuantity(1)
     setSellingPrice('')
     setSaleType('cash')
@@ -139,6 +155,9 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
     formData.set('quantity', String(quantity))
     formData.set('unit_price', String(priceNum))
     formData.set('sale_type', saleType)
+    if (reason.trim()) {
+      formData.set('reason', reason.trim())
+    }
 
     if (saleType === 'mb') {
       formData.set('bank', bank === 'Other' ? otherBank.trim() : bank)
@@ -195,28 +214,85 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-      <div>
+      <div className="relative">
         <label className="block text-sm font-medium text-slate-300 mb-1.5">
           Product
         </label>
-        <select
-          value={productId}
+        <input
+          type="text"
+          value={
+            productMenuOpen
+              ? productSearch
+              : selected
+                ? `${selected.name} (${selected.sku}) — Stock: ${selected.stock_qty}`
+                : productSearch
+          }
           onChange={(e) => {
-            setProductId(e.target.value)
-            setQuantity(1)
+            setProductSearch(e.target.value)
+            setProductMenuOpen(true)
+            if (productId) setProductId('')
             setMessage(null)
           }}
+          onFocus={() => {
+            setProductMenuOpen(true)
+            if (selected) setProductSearch('')
+          }}
+          onBlur={() => {
+            // delay so click on option registers
+            setTimeout(() => setProductMenuOpen(false), 180)
+          }}
+          placeholder="Search product by name or SKU…"
           className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
-          required
           disabled={isPending}
-        >
-          <option value="">— Select a product —</option>
-          {products.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} ({p.sku}) — Stock: {p.stock_qty}
-            </option>
-          ))}
-        </select>
+          autoComplete="off"
+        />
+        {productMenuOpen && (
+          <ul className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-slate-700 bg-slate-900 shadow-xl">
+            {filteredProducts.length === 0 ? (
+              <li className="px-4 py-3 text-sm text-slate-500">No products match</li>
+            ) : (
+              filteredProducts.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-800 ${
+                      productId === p.id ? 'bg-emerald-950/50 text-emerald-300' : 'text-white'
+                    }`}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setProductId(p.id)
+                      setProductSearch('')
+                      setProductMenuOpen(false)
+                      setQuantity(1)
+                      setMessage(null)
+                    }}
+                  >
+                    <span className="font-medium">{p.name}</span>
+                    <span className="text-slate-500 ml-1.5">({p.sku})</span>
+                    <span className="text-slate-400 float-right">Stock: {p.stock_qty}</span>
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+        {!productId && productSearch && !productMenuOpen && (
+          <p className="text-xs text-amber-400 mt-1">Select a product from the list</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-300 mb-1.5">
+          Reason / notes <span className="text-slate-500 font-normal">(optional)</span>
+        </label>
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Reason for this sale (e.g. air-by-air / special case)…"
+          rows={2}
+          className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-600 resize-y"
+          disabled={isPending}
+        />
       </div>
 
       {selected && (

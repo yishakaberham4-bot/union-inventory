@@ -177,6 +177,40 @@ export default async function AdminProfitReportPage({
               </tr>
             )}
           </tbody>
+          {rows.length > 0 && (
+            <tfoot className="bg-slate-950/90 border-t-2 border-slate-700">
+              <tr>
+                <td className="px-3 py-3 text-white font-semibold">
+                  Total ({rows.length} products)
+                </td>
+                <td className="px-3 py-3 text-right font-semibold text-white">
+                  {rows.reduce((s, r) => s + r.qty, 0)}
+                </td>
+                <td className="px-3 py-3 text-right font-semibold text-emerald-400">
+                  {formatMoney(rows.reduce((s, r) => s + r.revenue, 0))}
+                </td>
+                <td className="px-3 py-3 text-right font-semibold text-slate-300">
+                  {formatMoney(rows.reduce((s, r) => s + r.cost, 0))}
+                </td>
+                <td
+                  className={`px-3 py-3 text-right font-bold ${
+                    rows.reduce((s, r) => s + r.profit, 0) >= 0
+                      ? 'text-emerald-400'
+                      : 'text-red-400'
+                  }`}
+                >
+                  {formatMoney(rows.reduce((s, r) => s + r.profit, 0))}
+                </td>
+                <td className="px-3 py-3 text-right font-semibold text-purple-300">
+                  {(() => {
+                    const rev = rows.reduce((s, r) => s + r.revenue, 0)
+                    const prof = rows.reduce((s, r) => s + r.profit, 0)
+                    return rev > 0 ? ((prof / rev) * 100).toFixed(1) + '%' : '—'
+                  })()}
+                </td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
     </div>
