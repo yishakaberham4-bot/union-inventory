@@ -168,8 +168,8 @@ export async function createSale(formData: FormData) {
     if (isNaN(quantity) || quantity < 1) {
       return { error: 'Quantity must be at least 1' }
     }
-    if (isNaN(unitPriceInput) || unitPriceInput < 0) {
-      return { error: 'Enter a valid selling price (≥ 0)' }
+    if (isNaN(unitPriceInput) || unitPriceInput <= 0) {
+      return { error: 'Selling price must be greater than 0' }
     }
     if (!['cash', 'card', 'mb', 'credit'].includes(saleTypeRaw)) {
       return { error: 'Invalid sale type' }

@@ -113,8 +113,8 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
       setMessage({ type: 'err', text: `Only ${selected.stock_qty} in stock` })
       return
     }
-    if (sellingPrice === '' || isNaN(priceNum) || priceNum < 0) {
-      setMessage({ type: 'err', text: 'Enter a valid selling price (≥ 0)' })
+    if (sellingPrice === '' || isNaN(priceNum) || priceNum <= 0) {
+      setMessage({ type: 'err', text: 'Selling price must be greater than 0' })
       return
     }
 
@@ -187,10 +187,19 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
         setMessage({ type: 'err', text: result.error })
         return
       }
-      setMessage({
-        type: 'ok',
-        text: result?.message || 'Sale completed successfully',
+
+      const successText =
+        result?.message || 'Sale completed successfully'
+      setMessage({ type: 'ok', text: successText })
+
+      // Show system notification (phone + computer)
+      showSaleNotification({
+        productName: selected?.name || 'Product',
+        quantity,
+        unitPrice: priceNum,
+        total: total,
       })
+
       resetForm()
       // Soft refresh product list (stock numbers) without blocking UI
       setTimeout(() => router.refresh(), 300)
@@ -200,6 +209,40 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
       setMessage({ type: 'err', text })
     } finally {
       setIsPending(false)
+    }
+  }
+
+  /** Browser / PWA notification for a completed sale */
+  function showSaleNotification(info: {
+    productName: string
+    quantity: number
+    unitPrice: number
+    total: number
+  }) {
+    if (typeof window === 'undefined' || !('Notification' in window)) return
+
+    const title = 'Sale completed'
+    const body = `${info.quantity} × ${info.productName}\nPrice: ${info.unitPrice.toFixed(2)}  |  Total: ${info.total.toFixed(2)}`
+
+    const show = () => {
+      try {
+        new Notification(title, {
+          body,
+          icon: '/icons/icon-192.png',
+          badge: '/icons/icon-192.png',
+          tag: 'sale-notification',
+        })
+      } catch {
+        // ignore (some browsers block if not focused)
+      }
+    }
+
+    if (Notification.permission === 'granted') {
+      show()
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then((perm) => {
+        if (perm === 'granted') show()
+      })
     }
   }
 
@@ -325,10 +368,10 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
         <input
           type="number"
           step="0.01"
-          min="0"
+          min="0.01"
           value={sellingPrice}
           onChange={(e) => setSellingPrice(e.target.value)}
-          placeholder="Enter exact selling price"
+          placeholder="Enter exact selling price (must be > 0)"
           className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
           required
           disabled={isPending}

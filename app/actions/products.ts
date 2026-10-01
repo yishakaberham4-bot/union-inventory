@@ -158,8 +158,8 @@ export async function createProduct(formData: FormData) {
   if (!sku || !name) {
     return { error: 'SKU and product name are required' }
   }
-  if (isNaN(price) || price < 0) {
-    return { error: 'Price must be a valid number ≥ 0' }
+  if (isNaN(price) || price <= 0) {
+    return { error: 'Sell price must be greater than 0' }
   }
   if (isNaN(stock_qty) || stock_qty < 0) {
     return { error: 'Stock quantity must be a valid number ≥ 0' }
@@ -335,7 +335,7 @@ export async function updatePrice(formData: FormData) {
       : undefined
 
   if (!id) return { error: 'Product ID is required' }
-  if (isNaN(price) || price < 0) return { error: 'Price must be a valid number ≥ 0' }
+  if (isNaN(price) || price <= 0) return { error: 'Sell price must be greater than 0' }
 
   const admin = getAdminClient()
   const payload: Record<string, unknown> = {
