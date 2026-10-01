@@ -95,20 +95,33 @@ async function insertSaleRow(
   if (!error) return null
 
   const msg = (error.message || '').toLowerCase()
+  const isColumnError =
+    msg.includes('column') || msg.includes('schema cache') || msg.includes('does not exist')
+
+  // Retry without reason/notes if those columns are missing
+  if (isColumnError && (payload.reason != null || payload.notes != null)) {
+    const withoutReason = { ...payload }
+    delete withoutReason.reason
+    delete withoutReason.notes
+    ;({ error } = await admin.from('sales').insert(withoutReason))
+    if (!error) return null
+  }
 
   // Retry without credit-only columns if they don't exist yet
-  if (msg.includes('column') || msg.includes('schema cache')) {
+  if (isColumnError) {
     const withoutCredit = { ...payload }
     delete withoutCredit.credit_customer_name
     delete withoutCredit.credit_phone
     delete withoutCredit.credit_amount
     delete withoutCredit.paid_amount
+    delete withoutCredit.reason
+    delete withoutCredit.notes
     ;({ error } = await admin.from('sales').insert(withoutCredit))
     if (!error) return null
   }
 
-  // Retry without legacy-only columns
-  if (msg.includes('column') || msg.includes('schema cache')) {
+  // Retry without legacy-only columns (keep unit_price / total_amount)
+  if (isColumnError) {
     const minimal = { ...payload }
     delete minimal.sold_price
     delete minimal.buy_price
@@ -117,12 +130,14 @@ async function insertSaleRow(
     delete minimal.credit_phone
     delete minimal.credit_amount
     delete minimal.paid_amount
+    delete minimal.reason
+    delete minimal.notes
     ;({ error } = await admin.from('sales').insert(minimal))
     if (!error) return null
   }
 
-  // Retry with only legacy names
-  if (msg.includes('column') || msg.includes('schema cache') || error) {
+  // Retry with only legacy names (always preserve prices)
+  if (isColumnError || error) {
     const legacy: Record<string, unknown> = {
       product_id: payload.product_id,
       product_name: payload.product_name,
@@ -134,6 +149,15 @@ async function insertSaleRow(
       sale_type: payload.sale_type,
       sold_by: payload.sold_by,
       sold_by_email: payload.sold_by_email,
+    }
+    // Prefer unit_* names if the previous attempt complained about sold_*
+    if (msg.includes('sold_price') || msg.includes('buy_price') || msg.includes('total_price')) {
+      legacy.unit_price = payload.unit_price ?? payload.sold_price
+      legacy.unit_cost = payload.unit_cost ?? payload.buy_price
+      legacy.total_amount = payload.total_amount ?? payload.total_price
+      delete legacy.sold_price
+      delete legacy.buy_price
+      delete legacy.total_price
     }
     ;({ error } = await admin.from('sales').insert(legacy))
     if (!error) return null
@@ -168,8 +192,14 @@ export async function createSale(formData: FormData) {
     if (isNaN(quantity) || quantity < 1) {
       return { error: 'Quantity must be at least 1' }
     }
-    if (isNaN(unitPriceInput) || unitPriceInput <= 0) {
-      return { error: 'Selling price must be greater than 0' }
+    if (isNaN(unitPriceInput) || unitPriceInput < 0) {
+      return { error: 'Selling price must be 0 or greater' }
+    }
+    if (unitPriceInput === 0 && !reason) {
+      return {
+        error:
+          'Price 0 requires a reason / notes (e.g. free, special, air-by-air)',
+      }
     }
     if (!['cash', 'card', 'mb', 'credit'].includes(saleTypeRaw)) {
       return { error: 'Invalid sale type' }

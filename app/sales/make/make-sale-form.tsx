@@ -73,6 +73,15 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
     }
   }, [selected])
 
+  // Request notification permission once so phone/PWA alerts work after sales
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return
+    if (Notification.permission === 'default') {
+      // Soft request – browser shows prompt; user can allow for phone notifications
+      Notification.requestPermission().catch(() => {})
+    }
+  }, [])
+
   const priceNum = parseFloat(sellingPrice)
   const total =
     selected && !isNaN(priceNum) && priceNum >= 0 ? priceNum * quantity : 0
@@ -113,8 +122,15 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
       setMessage({ type: 'err', text: `Only ${selected.stock_qty} in stock` })
       return
     }
-    if (sellingPrice === '' || isNaN(priceNum) || priceNum <= 0) {
-      setMessage({ type: 'err', text: 'Selling price must be greater than 0' })
+    if (sellingPrice === '' || isNaN(priceNum) || priceNum < 0) {
+      setMessage({ type: 'err', text: 'Selling price must be 0 or greater' })
+      return
+    }
+    if (priceNum === 0 && !reason.trim()) {
+      setMessage({
+        type: 'err',
+        text: 'Price 0 requires a reason / notes (e.g. free, special, air-by-air)',
+      })
       return
     }
 
@@ -212,7 +228,7 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
     }
   }
 
-  /** Browser / PWA notification for a completed sale */
+  /** Browser / PWA notification for a completed sale (works on phone when PWA installed + permission granted) */
   function showSaleNotification(info: {
     productName: string
     quantity: number
@@ -223,25 +239,37 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
 
     const title = 'Sale completed'
     const body = `${info.quantity} × ${info.productName}\nPrice: ${info.unitPrice.toFixed(2)}  |  Total: ${info.total.toFixed(2)}`
+    const options: NotificationOptions = {
+      body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      tag: 'sale-notification',
+      // Keep notification visible a bit longer on mobile
+      requireInteraction: false,
+    }
 
-    const show = () => {
+    const show = async () => {
       try {
-        new Notification(title, {
-          body,
-          icon: '/icons/icon-192.png',
-          badge: '/icons/icon-192.png',
-          tag: 'sale-notification',
-        })
+        // Prefer service worker notification (more reliable on Android / installed PWA)
+        if ('serviceWorker' in navigator) {
+          const reg = await navigator.serviceWorker.ready
+          if (reg?.showNotification) {
+            await reg.showNotification(title, options)
+            return
+          }
+        }
+        // Fallback to page Notification
+        new Notification(title, options)
       } catch {
-        // ignore (some browsers block if not focused)
+        // ignore (permission revoked, browser restrictions, etc.)
       }
     }
 
     if (Notification.permission === 'granted') {
-      show()
+      void show()
     } else if (Notification.permission !== 'denied') {
       Notification.requestPermission().then((perm) => {
-        if (perm === 'granted') show()
+        if (perm === 'granted') void show()
       })
     }
   }
@@ -326,12 +354,15 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
 
       <div>
         <label className="block text-sm font-medium text-slate-300 mb-1.5">
-          Reason / notes <span className="text-slate-500 font-normal">(optional)</span>
+          Reason / notes{" "}
+          <span className="text-slate-500 font-normal">
+            (optional — required if selling price is 0)
+          </span>
         </label>
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Reason for this sale (e.g. air-by-air / special case)…"
+          placeholder="Reason for this sale (e.g. air-by-air / free / special case)…"
           rows={2}
           className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-600 resize-y"
           disabled={isPending}
@@ -368,10 +399,10 @@ export default function MakeSaleForm({ products }: { products: ProductOption[] }
         <input
           type="number"
           step="0.01"
-          min="0.01"
+          min="0"
           value={sellingPrice}
           onChange={(e) => setSellingPrice(e.target.value)}
-          placeholder="Enter exact selling price (must be > 0)"
+          placeholder="Enter exact selling price (0 allowed with reason)"
           className="w-full rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
           required
           disabled={isPending}
