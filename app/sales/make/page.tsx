@@ -29,11 +29,11 @@ export default async function MakeSalePage() {
   }
 
   return (
-    <div className="w-full px-2 sm:px-4 py-2 space-y-2">
-      <div className="flex items-center justify-between gap-4 max-w-[1400px] mx-auto px-1">
+    <div className="w-full flex flex-col flex-1 min-h-0 md:px-4 md:py-2">
+      <div className="hidden md:flex items-center justify-between gap-4 max-w-[1400px] mx-auto px-1 w-full mb-2">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-bold text-white">Make Sale</h1>
-          <p className="text-xs text-slate-500 hidden sm:block">
+          <p className="text-xs text-slate-500">
             POS terminal — select group, add items, pay
           </p>
         </div>
@@ -45,16 +45,24 @@ export default async function MakeSalePage() {
         </Link>
       </div>
 
+      {/* Mobile top link only */}
+      <div className="md:hidden flex items-center justify-between px-3 py-1.5 border-b border-slate-800/80 bg-slate-950">
+        <Link href="/sales/pos" className="text-xs text-slate-400 active:text-white py-1">
+          ← Back
+        </Link>
+        <span className="text-xs text-slate-500">Make Sale</span>
+        <span className="w-10" />
+      </div>
+
       {loadError ? (
-        <div className="max-w-xl mx-auto rounded-2xl border border-red-800/50 bg-red-950/40 p-5 text-red-200 text-sm space-y-2">
+        <div className="max-w-xl mx-auto m-4 rounded-2xl border border-red-800/50 bg-red-950/40 p-5 text-red-200 text-sm space-y-2">
           <p className="font-medium">Unable to load products</p>
           <p className="text-red-300/90 text-xs">{loadError}</p>
-          <p className="text-red-300/70 text-xs">
-            Please try again or contact your system administrator.
-          </p>
         </div>
       ) : (
-        <MakeSaleForm products={products} chart={chart} />
+        <div className="flex-1 min-h-0 flex flex-col">
+          <MakeSaleForm products={products} chart={chart} />
+        </div>
       )}
     </div>
   )

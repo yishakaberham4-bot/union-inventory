@@ -96,6 +96,7 @@ export default function MakeSaleForm({
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [isPending, setIsPending] = useState(false)
   const [chartOpen, setChartOpen] = useState(false)
+  const [mobileCartOpen, setMobileCartOpen] = useState(false)
 
   const categories = useMemo(() => {
     const map = new Map<string, number>()
@@ -342,53 +343,110 @@ export default function MakeSaleForm({
     }
   }
 
+
+  const cartItemCount = cart.reduce((s, i) => s + i.quantity, 0)
+
   if (products.length === 0) {
     return (
-      <div className="rounded-2xl border border-amber-800/50 bg-amber-950/30 p-6 text-center text-amber-200">
+      <div className="rounded-2xl border border-amber-800/50 bg-amber-950/30 p-6 text-center text-amber-200 mx-2">
         No products available for sale (all out of stock or inactive).
         Ask admin to add stock in Inventory Control.
       </div>
     )
   }
 
-  return (
-    <div className="flex flex-col h-[calc(100vh-5.5rem)] min-h-[520px] max-w-[1400px] mx-auto rounded-2xl overflow-hidden border border-slate-700/80 bg-[#1a2332] shadow-2xl">
-      {/* Top bar */}
-      <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-[#151c28] border-b border-slate-700/60 shrink-0">
-        <div className="flex items-center gap-3">
-          <span className="font-bold text-lg tracking-wide text-white">iTBOS</span>
-          <div className="hidden sm:flex items-center gap-1 text-xs">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveCategory(null)
-                setProductSearch('')
-              }}
-              className={`px-3 py-1 rounded-md transition ${
-                !activeCategory && !productSearch
-                  ? 'text-sky-300 border-b-2 border-sky-400'
-                  : 'text-slate-400 hover:text-white'
+  function CartLines({ compact }: { compact?: boolean }) {
+    if (cart.length === 0) {
+      return (
+        <p className="text-center text-slate-500 text-sm py-10 px-4">
+          Tap products to add them to the bill
+        </p>
+      )
+    }
+    return (
+      <>
+        {cart.map((item, index) => {
+          const lineTotal = item.unitPrice * item.quantity
+          return (
+            <div
+              key={`${item.productId}-${index}`}
+              className={`flex items-center gap-2 px-3 py-3 border-b border-slate-800/80 ${
+                compact ? 'text-sm' : 'text-base'
               }`}
             >
-              GROUPS
-            </button>
-            <span className="text-slate-600">|</span>
-            <span className="text-slate-400 px-2">SEARCH</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 text-xs sm:text-sm">
+              <div className="flex-1 min-w-0">
+                <div className="text-white font-medium truncate">{item.name}</div>
+                <div className="text-xs text-slate-500 mt-0.5">
+                  {item.unitPrice.toFixed(2)} each
+                </div>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (item.quantity <= 1) removeFromCart(index)
+                    else updateQty(index, item.quantity - 1)
+                  }}
+                  className="w-9 h-9 rounded-lg bg-slate-700 active:bg-slate-600 text-white text-lg font-medium touch-manipulation"
+                >
+                  −
+                </button>
+                <span className="w-8 text-center text-white font-semibold">
+                  {item.quantity}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => updateQty(index, item.quantity + 1)}
+                  disabled={item.quantity >= item.maxStock}
+                  className="w-9 h-9 rounded-lg bg-slate-700 active:bg-slate-600 disabled:opacity-30 text-white text-lg font-medium touch-manipulation"
+                >
+                  +
+                </button>
+              </div>
+              <div className="w-16 text-right text-white font-semibold shrink-0">
+                {lineTotal.toFixed(0)}
+              </div>
+              <button
+                type="button"
+                onClick={() => removeFromCart(index)}
+                className="w-8 h-8 rounded-lg text-slate-500 active:text-red-400 touch-manipulation"
+                aria-label="Remove"
+              >
+                ✕
+              </button>
+            </div>
+          )
+        })}
+      </>
+    )
+  }
+
+  return (
+    <div className="flex flex-col h-full min-h-0 flex-1 md:h-[calc(100vh-5.5rem)] md:min-h-[520px] md:flex-none max-w-[1400px] mx-auto md:rounded-2xl overflow-hidden border-0 md:border border-slate-700/80 bg-[#1a2332] shadow-none md:shadow-2xl">
+      {/* Top bar — mobile compact */}
+      <div className="flex items-center justify-between gap-2 px-3 py-2.5 bg-[#151c28] border-b border-slate-700/60 shrink-0 safe-top">
+        <span className="font-bold text-base sm:text-lg tracking-wide text-white shrink-0">
+          Union
+        </span>
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => {
-              if (cart.length === 0) {
-                setMessage({ type: 'err', text: 'Add items to the bill first' })
-                return
-              }
-              setMessage(null)
+              const pct = window.prompt('Discount % (0–100)', String(discountPct))
+              if (pct == null) return
+              const n = parseFloat(pct)
+              if (!isNaN(n) && n >= 0 && n <= 100) setDiscountPct(n)
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition"
+            className="shrink-0 px-2.5 py-2 rounded-lg bg-slate-800 text-slate-200 text-xs border border-slate-600 touch-manipulation min-h-[40px]"
           >
-            🧾 BILL
+            % Off
+          </button>
+          <button
+            type="button"
+            onClick={() => setChartOpen(true)}
+            className="shrink-0 px-2.5 py-2 rounded-lg bg-violet-700/80 text-white text-xs border border-violet-500/60 touch-manipulation min-h-[40px]"
+          >
+            📊
           </button>
           <button
             type="button"
@@ -398,100 +456,67 @@ export default function MakeSaleForm({
               setPayOpen(true)
               setMessage(null)
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 text-white border border-emerald-600 transition font-medium"
+            className="shrink-0 px-3 py-2 rounded-lg bg-emerald-600 disabled:opacity-40 text-white text-xs font-semibold touch-manipulation min-h-[40px] hidden sm:inline-flex"
           >
-            💳 PAY
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const pct = window.prompt('Discount % (0–100)', String(discountPct))
-              if (pct == null) return
-              const n = parseFloat(pct)
-              if (!isNaN(n) && n >= 0 && n <= 100) setDiscountPct(n)
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition"
-          >
-            % DISCOUNT
-          </button>
-          <button
-            type="button"
-            onClick={() => setChartOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-700/80 hover:bg-violet-600 text-white border border-violet-500/60 transition font-medium"
-          >
-            📊 CHART
+            Pay
           </button>
         </div>
       </div>
 
-      {/* Mini chart strip */}
-      {chartDays.length > 0 && (
+      {/* Search */}
+      <div className="px-3 pt-2 pb-1.5 shrink-0">
+        <input
+          type="search"
+          value={productSearch}
+          onChange={(e) => {
+            setProductSearch(e.target.value)
+            if (e.target.value) setActiveCategory(null)
+          }}
+          placeholder="Search name or SKU…"
+          className="w-full rounded-xl bg-slate-900/90 border border-slate-600 px-4 py-3 text-base text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 touch-manipulation"
+          enterKeyHint="search"
+          autoComplete="off"
+        />
+      </div>
+
+      {/* Category chips — horizontal scroll (mobile-friendly) */}
+      <div className="px-3 pb-2 flex gap-2 overflow-x-auto no-scrollbar shrink-0 snap-x">
         <button
           type="button"
-          onClick={() => setChartOpen(true)}
-          className="shrink-0 flex items-end gap-1 h-10 px-3 py-1.5 bg-[#0e141c]/80 border-b border-slate-800/80 hover:bg-slate-900/60 transition w-full text-left"
-          title="Open sales chart"
+          onClick={() => setActiveCategory(null)}
+          className={`snap-start shrink-0 px-3.5 py-2 rounded-full text-sm font-medium touch-manipulation min-h-[40px] transition ${
+            activeCategory === null
+              ? 'bg-sky-600 text-white'
+              : 'bg-slate-800 text-slate-300 active:bg-slate-700'
+          }`}
         >
-          <span className="text-[10px] text-slate-500 self-center mr-2 hidden sm:inline">
-            7d
-          </span>
-          {chartDays.map((d) => {
-            const pct = (d.revenue / chartMaxRev) * 100
-            return (
-              <div
-                key={d.date}
-                className="flex-1 flex items-end h-full min-w-0"
-                title={`${d.label}: ${d.revenue.toFixed(0)}`}
-              >
-                <div
-                  className="w-full rounded-t bg-emerald-500/70 min-h-[2px]"
-                  style={{ height: `${Math.max(d.revenue > 0 ? 8 : 4, pct)}%` }}
-                />
-              </div>
-            )
-          })}
-          <span className="text-[10px] text-emerald-400/90 self-center ml-2 font-medium whitespace-nowrap">
-            Today {(chart?.todayRevenue ?? 0).toFixed(0)}
-          </span>
+          All ({products.length})
         </button>
-      )}
+        {categories.map((cat, i) => (
+          <button
+            key={cat.name}
+            type="button"
+            onClick={() =>
+              setActiveCategory(activeCategory === cat.name ? null : cat.name)
+            }
+            className={`snap-start shrink-0 px-3.5 py-2 rounded-full text-sm font-medium touch-manipulation min-h-[40px] transition text-white ${
+              activeCategory === cat.name
+                ? 'ring-2 ring-white/90 ' + CATEGORY_COLORS[i % CATEGORY_COLORS.length]
+                : CATEGORY_COLORS[i % CATEGORY_COLORS.length] + ' opacity-90 active:opacity-100'
+            }`}
+          >
+            {cat.name} ({cat.count})
+          </button>
+        ))}
+      </div>
 
-      {/* Main body */}
+      {/* Main: products + desktop cart */}
       <div className="flex flex-1 min-h-0">
-        {/* Left: category tiles + products */}
-        <div className="flex-1 flex flex-col min-w-0 border-r border-slate-700/50">
-          {/* Search */}
-          <div className="px-3 pt-3 pb-2 shrink-0">
-            <input
-              type="search"
-              value={productSearch}
-              onChange={(e) => {
-                setProductSearch(e.target.value)
-                if (e.target.value) setActiveCategory(null)
-              }}
-              placeholder="Search product by name or SKU…"
-              className="w-full rounded-xl bg-slate-900/80 border border-slate-600 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </div>
-
-          {/* Category grid */}
+        {/* Products */}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-3 pb-28 md:pb-3">
+          {/* Desktop category tiles */}
           {!productSearch && (
-            <div className="px-3 pb-3 grid grid-cols-2 sm:grid-cols-3 gap-2.5 shrink-0 max-h-[42%] overflow-y-auto">
-              <button
-                type="button"
-                onClick={() => setActiveCategory(null)}
-                className={`rounded-xl p-3 text-left transition shadow-md ${
-                  activeCategory === null
-                    ? 'ring-2 ring-sky-400 bg-slate-700'
-                    : 'bg-slate-700/80 hover:bg-slate-600'
-                }`}
-              >
-                <div className="font-semibold text-white text-sm">All</div>
-                <div className="text-xs text-slate-300 mt-1 flex items-center justify-between">
-                  <span>{products.length} items</span>
-                  <span className="opacity-60">→</span>
-                </div>
-              </button>
+            <div className="hidden md:grid grid-cols-3 gap-2.5 mb-3">
               {categories.map((cat, i) => (
                 <button
                   key={cat.name}
@@ -502,134 +527,65 @@ export default function MakeSaleForm({
                   className={`rounded-xl p-3 text-left transition shadow-md text-white ${
                     CATEGORY_COLORS[i % CATEGORY_COLORS.length]
                   } ${
-                    activeCategory === cat.name ? 'ring-2 ring-white/80 scale-[1.02]' : 'hover:brightness-110'
+                    activeCategory === cat.name
+                      ? 'ring-2 ring-white/80'
+                      : 'hover:brightness-110'
                   }`}
                 >
                   <div className="font-semibold text-sm truncate">{cat.name}</div>
-                  <div className="text-xs opacity-90 mt-1 flex items-center justify-between">
-                    <span>{cat.count} items</span>
-                    <span className="opacity-70">→</span>
-                  </div>
+                  <div className="text-xs opacity-90 mt-1">{cat.count} items</div>
                 </button>
               ))}
             </div>
           )}
 
-          {/* Product list under category */}
-          <div className="flex-1 overflow-y-auto px-3 pb-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {filteredProducts.map((p) => {
-                const inCartQty =
-                  cart.find((c) => c.productId === p.id)?.quantity ?? 0
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => addToCart(p)}
-                    className="rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-600/60 p-3 text-left transition group"
-                  >
-                    <div className="font-medium text-white text-sm truncate group-hover:text-sky-200">
-                      {p.name}
-                    </div>
-                    <div className="text-xs text-slate-400 mt-0.5 flex justify-between gap-2">
-                      <span>{p.sku || '—'}</span>
-                      <span className="text-slate-500">Stock {p.stock_qty}</span>
-                    </div>
-                    <div className="mt-1.5 flex items-center justify-between">
-                      <span className="text-emerald-400 font-semibold text-sm">
-                        {p.price.toFixed(2)}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2">
+            {filteredProducts.map((p) => {
+              const inCartQty =
+                cart.find((c) => c.productId === p.id)?.quantity ?? 0
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => addToCart(p)}
+                  className="rounded-xl bg-slate-800/95 active:bg-slate-700 border border-slate-600/60 p-3 text-left transition touch-manipulation min-h-[88px]"
+                >
+                  <div className="font-medium text-white text-sm leading-snug line-clamp-2">
+                    {p.name}
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-1 flex justify-between gap-1">
+                    <span className="truncate">{p.sku || '—'}</span>
+                    <span className="shrink-0">Stk {p.stock_qty}</span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-emerald-400 font-bold text-base">
+                      {p.price.toFixed(0)}
+                    </span>
+                    {inCartQty > 0 && (
+                      <span className="text-xs bg-sky-600 text-white px-2 py-0.5 rounded-full font-semibold">
+                        ×{inCartQty}
                       </span>
-                      {inCartQty > 0 && (
-                        <span className="text-xs bg-sky-600/80 text-white px-2 py-0.5 rounded-full">
-                          ×{inCartQty}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                )
-              })}
-              {filteredProducts.length === 0 && (
-                <p className="col-span-full text-center text-slate-500 text-sm py-8">
-                  No products in this view
-                </p>
-              )}
-            </div>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+            {filteredProducts.length === 0 && (
+              <p className="col-span-full text-center text-slate-500 text-sm py-12">
+                No products in this view
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Right: cart / bill */}
-        <div className="w-full max-w-[380px] sm:max-w-[420px] flex flex-col bg-[#121820] shrink-0">
-          <div className="px-3 py-2 border-b border-slate-700/50 flex items-center justify-between text-xs text-slate-400 uppercase tracking-wide shrink-0">
-            <span className="w-[40%]">Title</span>
-            <span className="w-[12%] text-center">Code</span>
-            <span className="w-[12%] text-center">Items</span>
-            <span className="w-[16%] text-right">Price</span>
-            <span className="w-[20%] text-right">Total</span>
+        {/* Desktop cart panel */}
+        <div className="hidden md:flex w-full max-w-[380px] flex-col bg-[#121820] border-l border-slate-700/50 shrink-0">
+          <div className="px-3 py-2 border-b border-slate-700/50 text-xs text-slate-400 uppercase tracking-wide">
+            Bill
           </div>
-
           <div className="flex-1 overflow-y-auto">
-            {cart.length === 0 ? (
-              <p className="text-center text-slate-500 text-sm py-12 px-4">
-                Tap products to add them to the bill
-              </p>
-            ) : (
-              cart.map((item, index) => {
-                const lineTotal = item.unitPrice * item.quantity
-                const selected = selectedCartIndex === index
-                return (
-                  <div
-                    key={`${item.productId}-${index}`}
-                    onClick={() => setSelectedCartIndex(index)}
-                    className={`flex items-center gap-1 px-3 py-2.5 border-b border-slate-800/80 cursor-pointer text-sm transition ${
-                      selected ? 'bg-slate-700/70' : 'hover:bg-slate-800/50'
-                    }`}
-                  >
-                    <div className="w-[40%] min-w-0">
-                      <div className="text-white truncate font-medium">{item.name}</div>
-                    </div>
-                    <div className="w-[12%] text-center text-slate-500 text-xs truncate">
-                      {item.sku || '0'}
-                    </div>
-                    <div className="w-[12%] flex items-center justify-center gap-0.5">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (item.quantity <= 1) removeFromCart(index)
-                          else updateQty(index, item.quantity - 1)
-                        }}
-                        className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-white text-xs"
-                      >
-                        −
-                      </button>
-                      <span className="w-6 text-center text-white font-medium">
-                        {item.quantity}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          updateQty(index, item.quantity + 1)
-                        }}
-                        disabled={item.quantity >= item.maxStock}
-                        className="w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-white text-xs"
-                      >
-                        +
-                      </button>
-                    </div>
-                    <div className="w-[16%] text-right text-slate-300 text-xs">
-                      {item.unitPrice.toFixed(1)}
-                    </div>
-                    <div className="w-[20%] text-right text-white font-medium">
-                      {lineTotal.toFixed(1)}
-                    </div>
-                  </div>
-                )
-              })
-            )}
+            <CartLines />
           </div>
-
-          {/* Total + actions */}
           <div className="shrink-0 border-t border-slate-700 p-3 space-y-2 bg-[#0e141c]">
             {discountPct > 0 && (
               <div className="flex justify-between text-xs text-amber-300/90">
@@ -642,15 +598,13 @@ export default function MakeSaleForm({
                 type="button"
                 onClick={clearCart}
                 disabled={cart.length === 0}
-                className="text-xs px-2 py-1 rounded bg-slate-800 text-slate-400 hover:text-red-300 disabled:opacity-30"
+                className="text-xs px-2 py-1 rounded bg-slate-800 text-slate-400 disabled:opacity-30"
               >
                 Clear
               </button>
-              <div className="flex-1 text-right">
-                <span className="inline-block bg-sky-500 hover:bg-sky-400 text-white font-bold text-base px-5 py-2.5 rounded-lg shadow-lg min-w-[140px]">
-                  Total: {total.toFixed(0)}
-                </span>
-              </div>
+              <span className="bg-sky-500 text-white font-bold text-base px-5 py-2.5 rounded-lg min-w-[140px] text-center">
+                Total: {total.toFixed(0)}
+              </span>
             </div>
             <button
               type="button"
@@ -660,7 +614,7 @@ export default function MakeSaleForm({
                 setPayOpen(true)
                 setMessage(null)
               }}
-              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-semibold text-sm transition"
+              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-semibold text-sm"
             >
               {isPending ? 'Processing…' : 'Checkout / Pay'}
             </button>
@@ -668,57 +622,116 @@ export default function MakeSaleForm({
         </div>
       </div>
 
-      {/* Bottom category bar */}
-      <div className="shrink-0 flex items-stretch gap-0.5 overflow-x-auto bg-[#0d1219] border-t border-slate-700/60 px-1 py-1">
-        <button
-          type="button"
-          onClick={() => {
-            setActiveCategory(null)
-            setProductSearch('')
-          }}
-          className={`flex flex-col items-center justify-center min-w-[64px] px-2 py-1.5 rounded-lg text-[10px] transition ${
-            activeCategory === null
-              ? 'bg-slate-700 text-sky-300'
-              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-          }`}
-        >
-          <span className="text-base mb-0.5">⭐</span>
-          Favorites
-        </button>
-        {categories.map((cat, i) => (
+      {/* Mobile sticky cart bar */}
+      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-700 bg-[#0e141c]/98 backdrop-blur-md px-3 py-2.5 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
+        <div className="flex items-center gap-2 max-w-lg mx-auto">
           <button
-            key={cat.name}
             type="button"
-            onClick={() =>
-              setActiveCategory(activeCategory === cat.name ? null : cat.name)
-            }
-            className={`flex flex-col items-center justify-center min-w-[64px] px-2 py-1.5 rounded-lg text-[10px] transition ${
-              activeCategory === cat.name
-                ? 'bg-slate-700 text-sky-300'
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-            }`}
+            onClick={() => setMobileCartOpen(true)}
+            className="flex-1 flex items-center justify-between gap-2 rounded-xl bg-slate-800 border border-slate-600 px-4 py-3 touch-manipulation min-h-[48px]"
           >
-            <span
-              className={`w-5 h-5 rounded mb-0.5 ${CATEGORY_COLORS[i % CATEGORY_COLORS.length]}`}
-            />
-            <span className="truncate max-w-[56px]">{cat.name}</span>
+            <span className="flex items-center gap-2 text-white text-sm font-medium">
+              <span className="relative">
+                🛒
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-sky-500 text-[10px] font-bold flex items-center justify-center">
+                    {cartItemCount}
+                  </span>
+                )}
+              </span>
+              <span>{cart.length === 0 ? 'Cart empty' : `${cart.length} lines`}</span>
+            </span>
+            <span className="text-emerald-400 font-bold">{total.toFixed(0)}</span>
           </button>
-        ))}
+          <button
+            type="button"
+            disabled={cart.length === 0 || isPending}
+            onClick={() => {
+              resetPayment()
+              setPayOpen(true)
+              setMessage(null)
+            }}
+            className="shrink-0 rounded-xl bg-emerald-600 disabled:opacity-40 text-white font-semibold px-5 py-3 touch-manipulation min-h-[48px] text-sm"
+          >
+            Pay
+          </button>
+        </div>
       </div>
+
+      {/* Mobile cart bottom sheet */}
+      {mobileCartOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/60"
+            aria-label="Close cart"
+            onClick={() => setMobileCartOpen(false)}
+          />
+          <div className="relative bg-[#121820] rounded-t-2xl border-t border-slate-600 max-h-[85dvh] flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+              <h2 className="text-white font-semibold">Bill · {cartItemCount} items</h2>
+              <button
+                type="button"
+                onClick={() => setMobileCartOpen(false)}
+                className="w-10 h-10 rounded-full bg-slate-800 text-slate-300 text-lg touch-manipulation"
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto overscroll-contain">
+              <CartLines />
+            </div>
+            <div className="border-t border-slate-700 p-4 space-y-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              {discountPct > 0 && (
+                <div className="flex justify-between text-sm text-amber-300">
+                  <span>Discount {discountPct}%</span>
+                  <span>−{discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <button
+                  type="button"
+                  onClick={clearCart}
+                  disabled={cart.length === 0}
+                  className="text-sm text-slate-400 disabled:opacity-30 px-2 py-2"
+                >
+                  Clear all
+                </button>
+                <span className="text-xl font-bold text-sky-400">
+                  {total.toFixed(2)}
+                </span>
+              </div>
+              <button
+                type="button"
+                disabled={cart.length === 0 || isPending}
+                onClick={() => {
+                  setMobileCartOpen(false)
+                  resetPayment()
+                  setPayOpen(true)
+                  setMessage(null)
+                }}
+                className="w-full py-3.5 rounded-xl bg-emerald-600 active:bg-emerald-500 disabled:opacity-40 text-white font-semibold text-base touch-manipulation min-h-[52px]"
+              >
+                {isPending ? 'Processing…' : `Pay ${total.toFixed(2)}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Message toast */}
       {message && (
         <div
-          className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-50 max-w-md px-4 py-3 rounded-xl shadow-2xl text-sm ${
+          className={`fixed left-1/2 -translate-x-1/2 z-[60] max-w-[90vw] px-4 py-3 rounded-xl shadow-2xl text-sm ${
             message.type === 'ok'
               ? 'bg-emerald-900/95 border border-emerald-600 text-emerald-100'
               : 'bg-red-900/95 border border-red-600 text-red-100'
-          }`}
+          } bottom-24 md:bottom-20`}
         >
           {message.text}
           <button
             type="button"
-            className="ml-3 opacity-70 hover:opacity-100"
+            className="ml-3 opacity-70"
             onClick={() => setMessage(null)}
           >
             ✕
@@ -726,115 +739,21 @@ export default function MakeSaleForm({
         </div>
       )}
 
-      {/* Sales chart panel */}
-      {chartOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/70">
-          <div className="w-full max-w-2xl rounded-2xl bg-slate-900 border border-slate-600 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <span>📊</span> Sales chart
-              </h2>
-              <button
-                type="button"
-                onClick={() => setChartOpen(false)}
-                className="text-slate-400 hover:text-white text-xl leading-none"
-              >
-                ×
-              </button>
-            </div>
-            <div className="p-5 space-y-5">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3">
-                  <p className="text-[10px] uppercase tracking-wide text-slate-500">Today revenue</p>
-                  <p className="text-lg font-bold text-emerald-400 mt-0.5">
-                    {(chart?.todayRevenue ?? 0).toFixed(2)}
-                  </p>
-                </div>
-                <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3">
-                  <p className="text-[10px] uppercase tracking-wide text-slate-500">Today sales</p>
-                  <p className="text-lg font-bold text-sky-400 mt-0.5">
-                    {chart?.todayCount ?? 0}
-                  </p>
-                </div>
-                <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3">
-                  <p className="text-[10px] uppercase tracking-wide text-slate-500">7-day revenue</p>
-                  <p className="text-lg font-bold text-violet-400 mt-0.5">
-                    {(chart?.weekRevenue ?? 0).toFixed(2)}
-                  </p>
-                </div>
-                <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3">
-                  <p className="text-[10px] uppercase tracking-wide text-slate-500">7-day sales</p>
-                  <p className="text-lg font-bold text-amber-400 mt-0.5">
-                    {chart?.weekCount ?? 0}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">
-                  Last 7 days revenue
-                </h3>
-                {chartDays.length === 0 ? (
-                  <p className="text-sm text-slate-500 text-center py-10">
-                    No sales data for the last week
-                  </p>
-                ) : (
-                  <div className="flex items-end gap-2 h-48 px-1">
-                    {chartDays.map((d) => {
-                      const pct = (d.revenue / chartMaxRev) * 100
-                      return (
-                        <div
-                          key={d.date}
-                          className="flex-1 flex flex-col items-center gap-1 min-w-0"
-                        >
-                          <span className="text-[10px] text-slate-400 truncate w-full text-center">
-                            {d.revenue > 0 ? d.revenue.toFixed(0) : ''}
-                          </span>
-                          <div className="w-full flex-1 flex items-end">
-                            <div
-                              className="w-full rounded-t-md bg-gradient-to-t from-emerald-600 to-emerald-400 min-h-[3px] transition-all"
-                              style={{
-                                height: `${Math.max(d.revenue > 0 ? 6 : 3, pct)}%`,
-                              }}
-                              title={`${d.label}: ${d.revenue.toFixed(2)} (${d.count} sales)`}
-                            />
-                          </div>
-                          <span className="text-[10px] text-slate-500 truncate w-full text-center">
-                            {d.label}
-                          </span>
-                          <span className="text-[9px] text-slate-600">
-                            {d.count > 0 ? `${d.count}` : ''}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <p className="text-xs text-slate-500 text-center">
-                Chart updates when you refresh the page after new sales
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Payment modal */}
+      {/* Payment modal — full screen on mobile */}
       {payOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/70">
-          <div className="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-600 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-black/70">
+          <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-slate-900 border border-slate-600 shadow-2xl max-h-[92dvh] overflow-y-auto">
+            <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-slate-700 flex items-center justify-between sticky top-0 bg-slate-900 z-10">
               <h2 className="text-lg font-semibold text-white">Payment</h2>
               <button
                 type="button"
                 onClick={() => setPayOpen(false)}
-                className="text-slate-400 hover:text-white text-xl leading-none"
+                className="w-10 h-10 rounded-full bg-slate-800 text-slate-300 text-xl touch-manipulation"
               >
                 ×
               </button>
             </div>
-            <div className="p-5 space-y-4">
+            <div className="p-4 sm:p-5 space-y-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
               <div className="rounded-xl bg-slate-800/80 p-3 text-sm">
                 <div className="flex justify-between text-slate-300">
                   <span>{cart.length} line(s)</span>
@@ -843,23 +762,23 @@ export default function MakeSaleForm({
                     {discountPct > 0 && ` − ${discountPct}%`}
                   </span>
                 </div>
-                <div className="text-right text-xl font-bold text-sky-400 mt-1">
+                <div className="text-right text-2xl font-bold text-sky-400 mt-1">
                   {total.toFixed(2)}
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Sale type</label>
+                <label className="block text-xs text-slate-400 mb-2">Sale type</label>
                 <div className="grid grid-cols-4 gap-2">
                   {(['cash', 'card', 'mb', 'credit'] as SaleType[]).map((t) => (
                     <button
                       key={t}
                       type="button"
                       onClick={() => setSaleType(t)}
-                      className={`py-2 rounded-lg text-xs font-medium uppercase transition ${
+                      className={`py-3 rounded-xl text-xs font-semibold uppercase touch-manipulation min-h-[48px] ${
                         saleType === t
                           ? 'bg-sky-600 text-white'
-                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                          : 'bg-slate-800 text-slate-300'
                       }`}
                     >
                       {t}
@@ -874,7 +793,7 @@ export default function MakeSaleForm({
                   <select
                     value={bank}
                     onChange={(e) => setBank(e.target.value)}
-                    className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-white"
+                    className="w-full rounded-xl bg-slate-800 border border-slate-600 px-3 py-3 text-base text-white min-h-[48px]"
                   >
                     <option value="">Select…</option>
                     {BANKS.map((b) => (
@@ -888,7 +807,7 @@ export default function MakeSaleForm({
                       value={otherBank}
                       onChange={(e) => setOtherBank(e.target.value)}
                       placeholder="Bank name"
-                      className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-white"
+                      className="w-full rounded-xl bg-slate-800 border border-slate-600 px-3 py-3 text-base text-white min-h-[48px]"
                     />
                   )}
                 </div>
@@ -900,19 +819,20 @@ export default function MakeSaleForm({
                     value={creditName}
                     onChange={(e) => setCreditName(e.target.value)}
                     placeholder="Customer name"
-                    className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-white"
+                    className="w-full rounded-xl bg-slate-800 border border-slate-600 px-3 py-3 text-base text-white min-h-[48px]"
                   />
                   <input
                     value={creditPhone}
                     onChange={(e) => setCreditPhone(e.target.value)}
                     placeholder="Phone number"
-                    className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-white"
+                    inputMode="tel"
+                    className="w-full rounded-xl bg-slate-800 border border-slate-600 px-3 py-3 text-base text-white min-h-[48px]"
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setCreditMode('full')}
-                      className={`py-2 rounded-lg text-xs font-medium ${
+                      className={`py-3 rounded-xl text-sm font-medium touch-manipulation min-h-[48px] ${
                         creditMode === 'full'
                           ? 'bg-sky-600 text-white'
                           : 'bg-slate-800 text-slate-300'
@@ -923,7 +843,7 @@ export default function MakeSaleForm({
                     <button
                       type="button"
                       onClick={() => setCreditMode('two')}
-                      className={`py-2 rounded-lg text-xs font-medium ${
+                      className={`py-3 rounded-xl text-sm font-medium touch-manipulation min-h-[48px] ${
                         creditMode === 'two'
                           ? 'bg-sky-600 text-white'
                           : 'bg-slate-800 text-slate-300'
@@ -934,13 +854,13 @@ export default function MakeSaleForm({
                   </div>
                   {creditMode === 'two' && (
                     <div className="space-y-2 pl-1 border-l-2 border-slate-700">
-                      <div className="grid grid-cols-3 gap-1">
+                      <div className="grid grid-cols-3 gap-2">
                         {(['cash', 'card', 'mb'] as const).map((t) => (
                           <button
                             key={t}
                             type="button"
                             onClick={() => setPaidHalfType(t)}
-                            className={`py-1.5 rounded text-xs uppercase ${
+                            className={`py-2.5 rounded-lg text-xs uppercase touch-manipulation min-h-[44px] ${
                               paidHalfType === t
                                 ? 'bg-emerald-600 text-white'
                                 : 'bg-slate-800 text-slate-400'
@@ -955,7 +875,7 @@ export default function MakeSaleForm({
                           <select
                             value={paidHalfBank}
                             onChange={(e) => setPaidHalfBank(e.target.value)}
-                            className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-white"
+                            className="w-full rounded-xl bg-slate-800 border border-slate-600 px-3 py-3 text-base text-white min-h-[48px]"
                           >
                             <option value="">Select bank…</option>
                             {BANKS.map((b) => (
@@ -969,7 +889,7 @@ export default function MakeSaleForm({
                               value={paidHalfOtherBank}
                               onChange={(e) => setPaidHalfOtherBank(e.target.value)}
                               placeholder="Bank name"
-                              className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-white"
+                              className="w-full rounded-xl bg-slate-800 border border-slate-600 px-3 py-3 text-base text-white min-h-[48px]"
                             />
                           )}
                         </>
@@ -988,7 +908,7 @@ export default function MakeSaleForm({
                   onChange={(e) => setReason(e.target.value)}
                   rows={2}
                   placeholder="Optional notes…"
-                  className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm text-white resize-y"
+                  className="w-full rounded-xl bg-slate-800 border border-slate-600 px-3 py-3 text-base text-white resize-y"
                 />
               </div>
 
@@ -1002,10 +922,91 @@ export default function MakeSaleForm({
                 type="button"
                 disabled={isPending}
                 onClick={completeSale}
-                className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold transition"
+                className="w-full py-3.5 rounded-xl bg-emerald-600 active:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-base touch-manipulation min-h-[52px]"
               >
                 {isPending ? 'Processing…' : `Confirm pay ${total.toFixed(2)}`}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sales chart panel */}
+      {chartOpen && (
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-black/70">
+          <div className="w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl bg-slate-900 border border-slate-600 shadow-2xl max-h-[90dvh] overflow-y-auto">
+            <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between sticky top-0 bg-slate-900">
+              <h2 className="text-lg font-semibold text-white">📊 Sales chart</h2>
+              <button
+                type="button"
+                onClick={() => setChartOpen(false)}
+                className="w-10 h-10 rounded-full bg-slate-800 text-slate-300 text-xl touch-manipulation"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-4 space-y-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3">
+                  <p className="text-[10px] uppercase text-slate-500">Today revenue</p>
+                  <p className="text-lg font-bold text-emerald-400 mt-0.5">
+                    {(chart?.todayRevenue ?? 0).toFixed(2)}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3">
+                  <p className="text-[10px] uppercase text-slate-500">Today sales</p>
+                  <p className="text-lg font-bold text-sky-400 mt-0.5">
+                    {chart?.todayCount ?? 0}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3">
+                  <p className="text-[10px] uppercase text-slate-500">7-day revenue</p>
+                  <p className="text-lg font-bold text-violet-400 mt-0.5">
+                    {(chart?.weekRevenue ?? 0).toFixed(2)}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-3">
+                  <p className="text-[10px] uppercase text-slate-500">7-day sales</p>
+                  <p className="text-lg font-bold text-amber-400 mt-0.5">
+                    {chart?.weekCount ?? 0}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xs font-medium text-slate-400 uppercase mb-3">
+                  Last 7 days
+                </h3>
+                {chartDays.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-8">No data</p>
+                ) : (
+                  <div className="flex items-end gap-2 h-40 px-1">
+                    {chartDays.map((d) => {
+                      const pct = (d.revenue / chartMaxRev) * 100
+                      return (
+                        <div
+                          key={d.date}
+                          className="flex-1 flex flex-col items-center gap-1 min-w-0"
+                        >
+                          <span className="text-[10px] text-slate-400 truncate w-full text-center">
+                            {d.revenue > 0 ? d.revenue.toFixed(0) : ''}
+                          </span>
+                          <div className="w-full flex-1 flex items-end">
+                            <div
+                              className="w-full rounded-t-md bg-gradient-to-t from-emerald-600 to-emerald-400 min-h-[3px]"
+                              style={{
+                                height: `${Math.max(d.revenue > 0 ? 6 : 3, pct)}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-[9px] text-slate-500 truncate w-full text-center">
+                            {d.label}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
