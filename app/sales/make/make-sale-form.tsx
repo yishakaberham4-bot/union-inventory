@@ -377,84 +377,65 @@ export default function MakeSaleForm({
   function CartLines({ compact }: { compact?: boolean }) {
     if (cart.length === 0) {
       return (
-        <p className="text-center text-slate-500 text-sm py-10 px-4">
-          Select a product from the dropdown or tap products to add them to the bill
-        </p>
+        <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+          <p className="text-slate-400 text-sm font-medium">Order is empty</p>
+          <p className="text-slate-400/80 text-xs mt-1">Add items to the order</p>
+        </div>
       )
     }
     return (
       <>
         {cart.map((item, index) => {
           const lineTotal = item.unitPrice * item.quantity
-          const margin =
-            item.unitPrice > 0
-              ? (((item.unitPrice - item.cost) / item.unitPrice) * 100).toFixed(0)
-              : '—'
+          const isSelected = selectedCartIndex === index
           return (
             <div
               key={`${item.productId}-${index}`}
-              className={`flex flex-col gap-2 px-3 py-3 border-b border-slate-800/80 ${
-                compact ? 'text-sm' : 'text-base'
-              }`}
+              onClick={() => setSelectedCartIndex(index)}
+              className={`flex flex-col gap-1.5 px-3 py-2.5 border-b border-slate-100 cursor-pointer transition ${
+                isSelected ? 'bg-sky-50 ring-1 ring-inset ring-sky-200' : 'bg-white active:bg-slate-50'
+              } ${compact ? 'text-sm' : 'text-base'}`}
             >
               <div className="flex items-start gap-2">
                 <div className="flex-1 min-w-0">
-                  <div className="text-white font-medium truncate">{item.name}</div>
-                  <div className="text-xs text-slate-500 mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
-                    <span>Cost: {item.cost.toFixed(2)}</span>
-                    <span className="text-slate-600">·</span>
-                    <span>Margin: {margin}%</span>
+                  <div className="text-slate-900 font-medium truncate">{item.name}</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">
+                    Cost: {item.cost.toFixed(2)}
+                    {item.unitPrice > 0 && (
+                      <span className="text-slate-400">
+                        {' '}
+                        · margin{' '}
+                        {(
+                          ((item.unitPrice - item.cost) / item.unitPrice) *
+                          100
+                        ).toFixed(0)}
+                        %
+                      </span>
+                    )}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeFromCart(index)}
-                  className="w-8 h-8 rounded-lg text-slate-500 active:text-red-400 touch-manipulation shrink-0"
-                  aria-label="Remove"
-                >
-                  ✕
-                </button>
+                <div className="text-slate-900 font-semibold shrink-0 tabular-nums">
+                  {lineTotal.toFixed(2)}
+                </div>
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <label className="flex items-center gap-1.5 text-xs text-slate-400">
-                  <span className="shrink-0">Price</span>
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                  <span>Price</span>
                   <input
                     type="number"
                     min={0}
                     step="0.01"
                     value={item.unitPrice}
+                    onClick={(e) => e.stopPropagation()}
                     onChange={(e) => {
                       const v = parseFloat(e.target.value)
                       updateUnitPrice(index, isNaN(v) ? 0 : v)
                     }}
-                    className="w-20 rounded-lg bg-slate-800 border border-slate-600 px-2 py-1.5 text-sm text-white font-medium focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    className="w-[4.5rem] rounded-lg bg-white border border-slate-200 px-2 py-1 text-sm text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-sky-400"
                   />
                 </label>
-                <div className="flex items-center gap-1 shrink-0 ml-auto">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (item.quantity <= 1) removeFromCart(index)
-                      else updateQty(index, item.quantity - 1)
-                    }}
-                    className="w-9 h-9 rounded-lg bg-slate-700 active:bg-slate-600 text-white text-lg font-medium touch-manipulation"
-                  >
-                    −
-                  </button>
-                  <span className="w-8 text-center text-white font-semibold">
-                    {item.quantity}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => updateQty(index, item.quantity + 1)}
-                    disabled={item.quantity >= item.maxStock}
-                    className="w-9 h-9 rounded-lg bg-slate-700 active:bg-slate-600 disabled:opacity-30 text-white text-lg font-medium touch-manipulation"
-                  >
-                    +
-                  </button>
-                </div>
-                <div className="w-16 text-right text-white font-semibold shrink-0">
-                  {lineTotal.toFixed(0)}
+                <div className="flex items-center gap-1 ml-auto">
+                  <span className="text-xs text-slate-400 mr-1">×{item.quantity}</span>
                 </div>
               </div>
             </div>
@@ -465,13 +446,18 @@ export default function MakeSaleForm({
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0 flex-1 md:h-[calc(100vh-5.5rem)] md:min-h-[520px] md:flex-none max-w-[1400px] mx-auto md:rounded-2xl overflow-hidden border-0 md:border border-slate-700/80 bg-[#1a2332] shadow-none md:shadow-2xl">
-      {/* Top bar — mobile compact */}
-      <div className="flex items-center justify-between gap-2 px-3 py-2.5 bg-[#151c28] border-b border-slate-700/60 shrink-0 safe-top">
-        <span className="font-bold text-base sm:text-lg tracking-wide text-white shrink-0">
-          Union
-        </span>
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+    <div className="flex flex-col h-full min-h-0 flex-1 md:h-[calc(100vh-5.5rem)] md:min-h-[520px] md:flex-none max-w-[900px] mx-auto md:rounded-2xl overflow-hidden border-0 md:border border-slate-200 bg-[#f5f6f8] shadow-none md:shadow-xl text-slate-900">
+      {/* Top bar */}
+      <div className="flex items-center justify-between gap-2 px-4 py-3 bg-white border-b border-slate-200/80 shrink-0 safe-top">
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white text-sm font-bold">
+            U
+          </span>
+          <span className="font-semibold text-base tracking-tight text-slate-900">
+            Union
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => {
@@ -480,34 +466,39 @@ export default function MakeSaleForm({
               const n = parseFloat(pct)
               if (!isNaN(n) && n >= 0 && n <= 100) setDiscountPct(n)
             }}
-            className="shrink-0 px-2.5 py-2 rounded-lg bg-slate-800 text-slate-200 text-xs border border-slate-600 touch-manipulation min-h-[40px]"
+            className="shrink-0 px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium border border-slate-200 touch-manipulation min-h-[36px]"
           >
             % Off
           </button>
           <button
             type="button"
             onClick={() => setChartOpen(true)}
-            className="shrink-0 px-2.5 py-2 rounded-lg bg-violet-700/80 text-white text-xs border border-violet-500/60 touch-manipulation min-h-[40px]"
+            className="shrink-0 px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs border border-slate-200 touch-manipulation min-h-[36px]"
           >
             📊
-          </button>
-          <button
-            type="button"
-            disabled={cart.length === 0}
-            onClick={() => {
-              resetPayment()
-              setPayOpen(true)
-              setMessage(null)
-            }}
-            className="shrink-0 px-3 py-2 rounded-lg bg-emerald-600 disabled:opacity-40 text-white text-xs font-semibold touch-manipulation min-h-[40px] hidden sm:inline-flex"
-          >
-            Pay
           </button>
         </div>
       </div>
 
-      {/* Search + product dropdown */}
-      <div className="px-3 pt-2 pb-1.5 shrink-0 space-y-2">
+      {/* Order panel (top, like reference) */}
+      <div className="shrink-0 bg-white border-b border-slate-200 max-h-[32vh] overflow-y-auto overscroll-contain">
+        <CartLines />
+        {cart.length > 0 && (
+          <div className="px-3 py-2 flex items-center justify-between border-t border-slate-100 bg-slate-50/80">
+            {discountPct > 0 && (
+              <span className="text-xs text-amber-700">
+                −{discountPct}% ({discountAmount.toFixed(2)})
+              </span>
+            )}
+            <span className="ml-auto text-sm font-bold text-slate-900 tabular-nums">
+              Total {total.toFixed(2)}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Search */}
+      <div className="px-3 pt-2 pb-1.5 shrink-0 bg-[#f5f6f8]">
         <input
           type="search"
           value={productSearch}
@@ -516,200 +507,127 @@ export default function MakeSaleForm({
             if (e.target.value) setActiveCategory(null)
           }}
           placeholder="Search name or SKU…"
-          className="w-full rounded-xl bg-slate-900/90 border border-slate-600 px-4 py-3 text-base text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 touch-manipulation"
+          className="w-full rounded-xl bg-white border border-slate-200 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400 touch-manipulation shadow-sm"
           enterKeyHint="search"
           autoComplete="off"
         />
-        <div className="flex gap-2 items-stretch">
-          <select
-            value=""
-            onChange={(e) => {
-              addFromDropdown(e.target.value)
-              e.target.value = ''
-            }}
-            className="flex-1 rounded-xl bg-slate-900/90 border border-slate-600 px-3 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500 touch-manipulation min-h-[44px]"
-            aria-label="Select product to add"
-          >
-            <option value="" disabled>
-              — Select product to add —
-            </option>
-            {filteredProducts.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} · {p.price.toFixed(0)} · cost {p.cost.toFixed(0)} · stk {p.stock_qty}
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
 
-      {/* Category chips — horizontal scroll (mobile-friendly) */}
-      <div className="px-3 pb-2 flex gap-2 overflow-x-auto no-scrollbar shrink-0 snap-x">
-        <button
-          type="button"
-          onClick={() => setActiveCategory(null)}
-          className={`snap-start shrink-0 px-3.5 py-2 rounded-full text-sm font-medium touch-manipulation min-h-[40px] transition ${
-            activeCategory === null
-              ? 'bg-sky-600 text-white'
-              : 'bg-slate-800 text-slate-300 active:bg-slate-700'
-          }`}
-        >
-          All ({products.length})
-        </button>
-        {categories.map((cat, i) => (
+      {/* Category chips — soft pills grid like reference */}
+      <div className="px-3 pb-2 pt-1 shrink-0">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
           <button
-            key={cat.name}
             type="button"
-            onClick={() =>
-              setActiveCategory(activeCategory === cat.name ? null : cat.name)
-            }
-            className={`snap-start shrink-0 px-3.5 py-2 rounded-full text-sm font-medium touch-manipulation min-h-[40px] transition text-white ${
-              activeCategory === cat.name
-                ? 'ring-2 ring-white/90 ' + CATEGORY_COLORS[i % CATEGORY_COLORS.length]
-                : CATEGORY_COLORS[i % CATEGORY_COLORS.length] + ' opacity-90 active:opacity-100'
+            onClick={() => setActiveCategory(null)}
+            className={`rounded-lg px-3 py-2 text-left text-xs font-medium touch-manipulation min-h-[40px] transition ${
+              activeCategory === null
+                ? 'bg-slate-800 text-white shadow-sm'
+                : 'bg-slate-200/80 text-slate-700 active:bg-slate-300'
             }`}
           >
-            {cat.name} ({cat.count})
+            All ({products.length})
           </button>
-        ))}
-      </div>
-
-      {/* Main: products + desktop cart */}
-      <div className="flex flex-1 min-h-0">
-        {/* Products */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-3 pb-28 md:pb-3">
-          {/* Desktop category tiles */}
-          {!productSearch && (
-            <div className="hidden md:grid grid-cols-3 gap-2.5 mb-3">
-              {categories.map((cat, i) => (
-                <button
-                  key={cat.name}
-                  type="button"
-                  onClick={() =>
-                    setActiveCategory(activeCategory === cat.name ? null : cat.name)
-                  }
-                  className={`rounded-xl p-3 text-left transition shadow-md text-white ${
-                    CATEGORY_COLORS[i % CATEGORY_COLORS.length]
-                  } ${
-                    activeCategory === cat.name
-                      ? 'ring-2 ring-white/80'
-                      : 'hover:brightness-110'
-                  }`}
-                >
-                  <div className="font-semibold text-sm truncate">{cat.name}</div>
-                  <div className="text-xs opacity-90 mt-1">{cat.count} items</div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2">
-            {filteredProducts.map((p) => {
-              const inCartQty =
-                cart.find((c) => c.productId === p.id)?.quantity ?? 0
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => addToCart(p)}
-                  className="rounded-xl bg-slate-800/95 active:bg-slate-700 border border-slate-600/60 p-3 text-left transition touch-manipulation min-h-[88px]"
-                >
-                  <div className="font-medium text-white text-sm leading-snug line-clamp-2">
-                    {p.name}
-                  </div>
-                  <div className="text-[11px] text-slate-400 mt-1 flex justify-between gap-1">
-                    <span className="truncate">{p.sku || '—'}</span>
-                    <span className="shrink-0">Stk {p.stock_qty}</span>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between gap-1">
-                    <div className="flex flex-col">
-                      <span className="text-emerald-400 font-bold text-base leading-tight">
-                        {p.price.toFixed(0)}
-                      </span>
-                      <span className="text-[10px] text-slate-500">
-                        cost {p.cost.toFixed(0)}
-                      </span>
-                    </div>
-                    {inCartQty > 0 && (
-                      <span className="text-xs bg-sky-600 text-white px-2 py-0.5 rounded-full font-semibold">
-                        ×{inCartQty}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              )
-            })}
-            {filteredProducts.length === 0 && (
-              <p className="col-span-full text-center text-slate-500 text-sm py-12">
-                No products in this view
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Desktop cart panel */}
-        <div className="hidden md:flex w-full max-w-[380px] flex-col bg-[#121820] border-l border-slate-700/50 shrink-0">
-          <div className="px-3 py-2 border-b border-slate-700/50 text-xs text-slate-400 uppercase tracking-wide">
-            Bill
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            <CartLines />
-          </div>
-          <div className="shrink-0 border-t border-slate-700 p-3 space-y-2 bg-[#0e141c]">
-            {discountPct > 0 && (
-              <div className="flex justify-between text-xs text-amber-300/90">
-                <span>Discount {discountPct}%</span>
-                <span>−{discountAmount.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={clearCart}
-                disabled={cart.length === 0}
-                className="text-xs px-2 py-1 rounded bg-slate-800 text-slate-400 disabled:opacity-30"
-              >
-                Clear
-              </button>
-              <span className="bg-sky-500 text-white font-bold text-base px-5 py-2.5 rounded-lg min-w-[140px] text-center">
-                Total: {total.toFixed(0)}
-              </span>
-            </div>
+          {categories.map((cat) => (
             <button
+              key={cat.name}
               type="button"
-              disabled={cart.length === 0 || isPending}
-              onClick={() => {
-                resetPayment()
-                setPayOpen(true)
-                setMessage(null)
-              }}
-              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-semibold text-sm"
+              onClick={() =>
+                setActiveCategory(activeCategory === cat.name ? null : cat.name)
+              }
+              className={`rounded-lg px-3 py-2 text-left text-xs font-medium touch-manipulation min-h-[40px] transition truncate ${
+                activeCategory === cat.name
+                  ? 'bg-slate-800 text-white shadow-sm'
+                  : 'bg-slate-200/80 text-slate-700 active:bg-slate-300'
+              }`}
             >
-              {isPending ? 'Processing…' : 'Checkout / Pay'}
+              {cat.name}
             </button>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Mobile sticky cart bar */}
-      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-700 bg-[#0e141c]/98 backdrop-blur-md px-3 py-2.5 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
-        <div className="flex items-center gap-2 max-w-lg mx-auto">
+      {/* Product grid — white cards */}
+      <div className="flex-1 overflow-y-auto overscroll-contain px-3 pb-28 md:pb-3">
+        <div className="grid grid-cols-3 gap-2">
+          {filteredProducts.map((p) => {
+            const inCartQty =
+              cart.find((c) => c.productId === p.id)?.quantity ?? 0
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => addToCart(p)}
+                className="rounded-xl bg-white border border-slate-200/90 p-2.5 text-left shadow-sm active:scale-[0.98] transition touch-manipulation min-h-[88px] flex flex-col"
+              >
+                <div className="font-medium text-slate-900 text-[13px] leading-snug line-clamp-2 flex-1">
+                  {p.name}
+                </div>
+                <div className="mt-2 flex items-end justify-between gap-1">
+                  <div>
+                    <div className="text-slate-900 font-semibold text-sm tabular-nums">
+                      {p.price.toFixed(2)}
+                    </div>
+                    <div className="text-[10px] text-slate-400 tabular-nums">
+                      cost {p.cost.toFixed(2)}
+                    </div>
+                  </div>
+                  {inCartQty > 0 && (
+                    <span className="text-[10px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded-full font-semibold">
+                      ×{inCartQty}
+                    </span>
+                  )}
+                </div>
+              </button>
+            )
+          })}
+          {filteredProducts.length === 0 && (
+            <p className="col-span-full text-center text-slate-400 text-sm py-12">
+              No products in this view
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom action bar — qty + clear + pay */}
+      <div className="fixed md:static bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-3 shrink-0">
+        <div className="flex items-center gap-2 max-w-[900px] mx-auto">
           <button
             type="button"
-            onClick={() => setMobileCartOpen(true)}
-            className="flex-1 flex items-center justify-between gap-2 rounded-xl bg-slate-800 border border-slate-600 px-4 py-3 touch-manipulation min-h-[48px]"
+            disabled={selectedCartIndex == null}
+            onClick={() => {
+              if (selectedCartIndex == null) return
+              const item = cart[selectedCartIndex]
+              if (!item) return
+              updateQty(selectedCartIndex, item.quantity + 1)
+            }}
+            className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 text-xl font-medium disabled:opacity-30 touch-manipulation"
+            aria-label="Increase quantity"
           >
-            <span className="flex items-center gap-2 text-white text-sm font-medium">
-              <span className="relative">
-                🛒
-                {cartItemCount > 0 && (
-                  <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-sky-500 text-[10px] font-bold flex items-center justify-center">
-                    {cartItemCount}
-                  </span>
-                )}
-              </span>
-              <span>{cart.length === 0 ? 'Cart empty' : `${cart.length} lines`}</span>
-            </span>
-            <span className="text-emerald-400 font-bold">{total.toFixed(0)}</span>
+            +
+          </button>
+          <button
+            type="button"
+            disabled={selectedCartIndex == null}
+            onClick={() => {
+              if (selectedCartIndex == null) return
+              const item = cart[selectedCartIndex]
+              if (!item) return
+              if (item.quantity <= 1) removeFromCart(selectedCartIndex)
+              else updateQty(selectedCartIndex, item.quantity - 1)
+            }}
+            className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 text-xl font-medium disabled:opacity-30 touch-manipulation"
+            aria-label="Decrease quantity"
+          >
+            −
+          </button>
+          <button
+            type="button"
+            disabled={cart.length === 0}
+            onClick={clearCart}
+            className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 disabled:opacity-30 touch-manipulation flex items-center justify-center"
+            aria-label="Clear order"
+          >
+            🗑
           </button>
           <button
             type="button"
@@ -719,9 +637,9 @@ export default function MakeSaleForm({
               setPayOpen(true)
               setMessage(null)
             }}
-            className="shrink-0 rounded-xl bg-emerald-600 disabled:opacity-40 text-white font-semibold px-5 py-3 touch-manipulation min-h-[48px] text-sm"
+            className="flex-1 h-11 rounded-xl bg-rose-400 hover:bg-rose-500 disabled:opacity-40 text-white font-semibold text-sm touch-manipulation shadow-sm"
           >
-            Pay
+            {isPending ? '…' : cart.length === 0 ? '×' : `Pay ${total.toFixed(2)}`}
           </button>
         </div>
       </div>
@@ -790,10 +708,10 @@ export default function MakeSaleForm({
       {/* Message toast */}
       {message && (
         <div
-          className={`fixed left-1/2 -translate-x-1/2 z-[60] max-w-[90vw] px-4 py-3 rounded-xl shadow-2xl text-sm ${
+          className={`fixed left-1/2 -translate-x-1/2 z-[60] max-w-[90vw] px-4 py-3 rounded-xl shadow-lg text-sm ${
             message.type === 'ok'
-              ? 'bg-emerald-900/95 border border-emerald-600 text-emerald-100'
-              : 'bg-red-900/95 border border-red-600 text-red-100'
+              ? 'bg-emerald-50 border border-emerald-300 text-emerald-900'
+              : 'bg-red-50 border border-red-300 text-red-900'
           } bottom-24 md:bottom-20`}
         >
           {message.text}
