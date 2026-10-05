@@ -377,7 +377,85 @@ export default function MakeSaleForm({
   function CartLines({ compact }: { compact?: boolean }) {
     if (cart.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center min-h-[140px]">
+          <div className="w-14 h-14 rounded-full bg-[#e7f3fb] flex items-center justify-center text-2xl mb-3">
+            🛒
+          </div>
+          <p className="text-[#8e8e93] text-[15px] font-medium">Order is empty</p>
+          <p className="text-[#b0b0b5] text-[13px] mt-1">Tap a product to add it</p>
+        </div>
+      )
+    }
+    return (
+      <>
+        {cart.map((item, index) => {
+          const lineTotal = item.unitPrice * item.quantity
+          const isSelected = selectedCartIndex === index
+          const initial = (item.name || '?').trim().charAt(0).toUpperCase()
+          return (
+            <div
+              key={`${item.productId}-${index}`}
+              onClick={() => setSelectedCartIndex(index)}
+              className={`flex gap-3 px-3 py-2.5 cursor-pointer transition active:bg-[#f0f2f5] ${
+                isSelected ? 'bg-[#e7f3fb]' : 'bg-white'
+              }`}
+            >
+              <div className="w-11 h-11 rounded-full bg-[#2AABEE] text-white flex items-center justify-center text-[15px] font-semibold shrink-0">
+                {initial}
+              </div>
+              <div className="flex-1 min-w-0 border-b border-[#f0f0f0] pb-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-[15px] text-[#000] font-medium truncate leading-tight">
+                      {item.name}
+                    </div>
+                    <div className="text-[13px] text-[#8e8e93] mt-0.5">
+                      Cost {item.cost.toFixed(2)}
+                      {item.unitPrice > 0 && (
+                        <span>
+                          {' '}
+                          ·{' '}
+                          {(
+                            ((item.unitPrice - item.cost) / item.unitPrice) *
+                            100
+                          ).toFixed(0)}
+                          % margin
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-[15px] font-semibold text-[#000] tabular-nums">
+                      {lineTotal.toFixed(2)}
+                    </div>
+                    <div className="text-[12px] text-[#8e8e93]">×{item.quantity}</div>
+                  </div>
+                </div>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <span className="text-[12px] text-[#8e8e93]">Price</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={item.unitPrice}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value)
+                      updateUnitPrice(index, isNaN(v) ? 0 : v)
+                    }}
+                    className="w-[5rem] rounded-lg bg-[#f0f2f5] border-0 px-2 py-1 text-[14px] text-[#000] font-medium focus:outline-none focus:ring-2 focus:ring-[#2AABEE]/40"
+                  />
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </>
+    )
+  }
+
+  return (
+        <div className="flex flex-col items-center justify-center py-14 px-4 text-center min-h-[120px]">
           <p className="text-slate-400 text-sm font-medium">Order is empty</p>
           <p className="text-slate-400/80 text-xs mt-1">Add items to the order</p>
         </div>
@@ -446,151 +524,165 @@ export default function MakeSaleForm({
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0 flex-1 md:h-[calc(100vh-5.5rem)] md:min-h-[520px] md:flex-none max-w-[900px] mx-auto md:rounded-2xl overflow-hidden border-0 md:border border-slate-200 bg-[#f5f6f8] shadow-none md:shadow-xl text-slate-900">
-      {/* Top bar */}
-      <div className="flex items-center justify-between gap-2 px-4 py-3 bg-white border-b border-slate-200/80 shrink-0 safe-top">
-        <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white text-sm font-bold">
-            U
-          </span>
-          <span className="font-semibold text-base tracking-tight text-slate-900">
-            Union
-          </span>
+    <div className="flex flex-col h-full min-h-0 flex-1 md:h-[calc(100vh-5.5rem)] md:min-h-[560px] md:flex-none max-w-[430px] mx-auto md:rounded-[28px] overflow-hidden border-0 md:border md:border-[#d9d9d9] bg-white shadow-none md:shadow-2xl text-[#000]">
+      {/* Telegram-style header */}
+      <div className="flex items-center gap-2 px-3 py-2.5 bg-[#2481cc] text-white shrink-0 safe-top">
+        <button
+          type="button"
+          onClick={() => router.push('/sales/pos')}
+          className="w-9 h-9 flex items-center justify-center rounded-full active:bg-white/15 touch-manipulation text-xl"
+          aria-label="Back"
+        >
+          ‹
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-[17px] leading-tight truncate">Make Sale</div>
+          <div className="text-[12px] text-white/80 leading-tight">
+            {cartItemCount > 0 ? `${cartItemCount} item${cartItemCount === 1 ? '' : 's'} · ${total.toFixed(2)}` : 'Select products'}
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => {
-              const pct = window.prompt('Discount % (0–100)', String(discountPct))
-              if (pct == null) return
-              const n = parseFloat(pct)
-              if (!isNaN(n) && n >= 0 && n <= 100) setDiscountPct(n)
+        <button
+          type="button"
+          onClick={() => {
+            const pct = window.prompt('Discount % (0–100)', String(discountPct))
+            if (pct == null) return
+            const n = parseFloat(pct)
+            if (!isNaN(n) && n >= 0 && n <= 100) setDiscountPct(n)
+          }}
+          className="px-2.5 py-1.5 rounded-full bg-white/15 text-[12px] font-medium touch-manipulation"
+        >
+          % Off
+        </button>
+        <button
+          type="button"
+          onClick={() => setChartOpen(true)}
+          className="w-9 h-9 flex items-center justify-center rounded-full active:bg-white/15 touch-manipulation"
+        >
+          📊
+        </button>
+      </div>
+
+      {/* Search — Telegram pill */}
+      <div className="px-3 py-2 bg-white border-b border-[#efefef] shrink-0">
+        <div className="flex items-center gap-2 rounded-xl bg-[#f0f2f5] px-3 py-2">
+          <span className="text-[#8e8e93] text-sm">🔍</span>
+          <input
+            type="search"
+            value={productSearch}
+            onChange={(e) => {
+              setProductSearch(e.target.value)
+              if (e.target.value) setActiveCategory(null)
             }}
-            className="shrink-0 px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium border border-slate-200 touch-manipulation min-h-[36px]"
-          >
-            % Off
-          </button>
-          <button
-            type="button"
-            onClick={() => setChartOpen(true)}
-            className="shrink-0 px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs border border-slate-200 touch-manipulation min-h-[36px]"
-          >
-            📊
-          </button>
+            placeholder="Search"
+            className="flex-1 bg-transparent border-0 text-[15px] text-[#000] placeholder:text-[#8e8e93] focus:outline-none"
+            enterKeyHint="search"
+            autoComplete="off"
+          />
         </div>
       </div>
 
-      {/* Order panel (top, like reference) */}
-      <div className="shrink-0 bg-white border-b border-slate-200 max-h-[32vh] overflow-y-auto overscroll-contain">
+      {/* Order / cart — Telegram list */}
+      <div className="shrink-0 max-h-[34vh] overflow-y-auto overscroll-contain bg-white border-b border-[#efefef]">
         <CartLines />
         {cart.length > 0 && (
-          <div className="px-3 py-2 flex items-center justify-between border-t border-slate-100 bg-slate-50/80">
-            {discountPct > 0 && (
-              <span className="text-xs text-amber-700">
+          <div className="px-4 py-2 flex items-center justify-between bg-[#f7f7f8]">
+            {discountPct > 0 ? (
+              <span className="text-[13px] text-[#e6a817]">
                 −{discountPct}% ({discountAmount.toFixed(2)})
               </span>
+            ) : (
+              <span className="text-[13px] text-[#8e8e93]">Total</span>
             )}
-            <span className="ml-auto text-sm font-bold text-slate-900 tabular-nums">
-              Total {total.toFixed(2)}
+            <span className="text-[16px] font-semibold tabular-nums text-[#000]">
+              {total.toFixed(2)}
             </span>
           </div>
         )}
       </div>
 
-      {/* Search */}
-      <div className="px-3 pt-2 pb-1.5 shrink-0 bg-[#f5f6f8]">
-        <input
-          type="search"
-          value={productSearch}
-          onChange={(e) => {
-            setProductSearch(e.target.value)
-            if (e.target.value) setActiveCategory(null)
-          }}
-          placeholder="Search name or SKU…"
-          className="w-full rounded-xl bg-white border border-slate-200 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400 touch-manipulation shadow-sm"
-          enterKeyHint="search"
-          autoComplete="off"
-        />
-      </div>
-
-      {/* Category chips — soft pills grid like reference */}
-      <div className="px-3 pb-2 pt-1 shrink-0">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+      {/* Categories — horizontal Telegram chips */}
+      <div className="px-3 py-2 flex gap-2 overflow-x-auto no-scrollbar shrink-0 bg-white border-b border-[#efefef]">
+        <button
+          type="button"
+          onClick={() => setActiveCategory(null)}
+          className={`shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-medium touch-manipulation transition ${
+            activeCategory === null
+              ? 'bg-[#2AABEE] text-white'
+              : 'bg-[#f0f2f5] text-[#000] active:bg-[#e4e6eb]'
+          }`}
+        >
+          All
+        </button>
+        {categories.map((cat) => (
           <button
+            key={cat.name}
             type="button"
-            onClick={() => setActiveCategory(null)}
-            className={`rounded-lg px-3 py-2 text-left text-xs font-medium touch-manipulation min-h-[40px] transition ${
-              activeCategory === null
-                ? 'bg-slate-800 text-white shadow-sm'
-                : 'bg-slate-200/80 text-slate-700 active:bg-slate-300'
+            onClick={() =>
+              setActiveCategory(activeCategory === cat.name ? null : cat.name)
+            }
+            className={`shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-medium touch-manipulation transition ${
+              activeCategory === cat.name
+                ? 'bg-[#2AABEE] text-white'
+                : 'bg-[#f0f2f5] text-[#000] active:bg-[#e4e6eb]'
             }`}
           >
-            All ({products.length})
+            {cat.name}
           </button>
-          {categories.map((cat) => (
-            <button
-              key={cat.name}
-              type="button"
-              onClick={() =>
-                setActiveCategory(activeCategory === cat.name ? null : cat.name)
-              }
-              className={`rounded-lg px-3 py-2 text-left text-xs font-medium touch-manipulation min-h-[40px] transition truncate ${
-                activeCategory === cat.name
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'bg-slate-200/80 text-slate-700 active:bg-slate-300'
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
+        ))}
       </div>
 
-      {/* Product grid — white cards */}
-      <div className="flex-1 overflow-y-auto overscroll-contain px-3 pb-28 md:pb-3">
-        <div className="grid grid-cols-3 gap-2">
-          {filteredProducts.map((p) => {
+      {/* Products — Telegram chat-list style rows */}
+      <div className="flex-1 overflow-y-auto overscroll-contain bg-white pb-24">
+        {filteredProducts.length === 0 ? (
+          <p className="text-center text-[#8e8e93] text-[14px] py-16">No products</p>
+        ) : (
+          filteredProducts.map((p) => {
             const inCartQty =
               cart.find((c) => c.productId === p.id)?.quantity ?? 0
+            const initial = (p.name || '?').trim().charAt(0).toUpperCase()
             return (
               <button
                 key={p.id}
                 type="button"
                 onClick={() => addToCart(p)}
-                className="rounded-xl bg-white border border-slate-200/90 p-2.5 text-left shadow-sm active:scale-[0.98] transition touch-manipulation min-h-[88px] flex flex-col"
+                className="w-full flex gap-3 px-3 py-2.5 text-left active:bg-[#f0f2f5] touch-manipulation"
               >
-                <div className="font-medium text-slate-900 text-[13px] leading-snug line-clamp-2 flex-1">
-                  {p.name}
+                <div
+                  className={`w-12 h-12 rounded-full flex items-center justify-center text-[16px] font-semibold shrink-0 ${
+                    inCartQty > 0
+                      ? 'bg-[#2AABEE] text-white'
+                      : 'bg-[#e7f3fb] text-[#2481cc]'
+                  }`}
+                >
+                  {inCartQty > 0 ? inCartQty : initial}
                 </div>
-                <div className="mt-2 flex items-end justify-between gap-1">
-                  <div>
-                    <div className="text-slate-900 font-semibold text-sm tabular-nums">
+                <div className="flex-1 min-w-0 border-b border-[#f0f0f0] pb-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-[15px] font-medium text-[#000] truncate leading-tight">
+                        {p.name}
+                      </div>
+                      <div className="text-[13px] text-[#8e8e93] mt-0.5 truncate">
+                        {p.sku || '—'} · stk {p.stock_qty}
+                      </div>
+                      <div className="text-[12px] text-[#8e8e93] mt-0.5">
+                        Cost {p.cost.toFixed(2)}
+                      </div>
+                    </div>
+                    <div className="text-[15px] font-semibold text-[#000] tabular-nums shrink-0">
                       {p.price.toFixed(2)}
                     </div>
-                    <div className="text-[10px] text-slate-400 tabular-nums">
-                      cost {p.cost.toFixed(2)}
-                    </div>
                   </div>
-                  {inCartQty > 0 && (
-                    <span className="text-[10px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded-full font-semibold">
-                      ×{inCartQty}
-                    </span>
-                  )}
                 </div>
               </button>
             )
-          })}
-          {filteredProducts.length === 0 && (
-            <p className="col-span-full text-center text-slate-400 text-sm py-12">
-              No products in this view
-            </p>
-          )}
-        </div>
+          })
+        )}
       </div>
 
-      {/* Bottom action bar — qty + clear + pay */}
-      <div className="fixed md:static bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-3 shrink-0">
-        <div className="flex items-center gap-2 max-w-[900px] mx-auto">
+      {/* Telegram-style bottom composer bar */}
+      <div className="fixed md:static bottom-0 inset-x-0 z-40 bg-white border-t border-[#e5e5e5] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-3 shrink-0 max-w-[430px] mx-auto">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             disabled={selectedCartIndex == null}
@@ -600,8 +692,8 @@ export default function MakeSaleForm({
               if (!item) return
               updateQty(selectedCartIndex, item.quantity + 1)
             }}
-            className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 text-xl font-medium disabled:opacity-30 touch-manipulation"
-            aria-label="Increase quantity"
+            className="w-10 h-10 rounded-full bg-[#f0f2f5] text-[#2481cc] text-xl font-medium disabled:opacity-30 touch-manipulation flex items-center justify-center"
+            aria-label="Increase"
           >
             +
           </button>
@@ -615,8 +707,8 @@ export default function MakeSaleForm({
               if (item.quantity <= 1) removeFromCart(selectedCartIndex)
               else updateQty(selectedCartIndex, item.quantity - 1)
             }}
-            className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 text-xl font-medium disabled:opacity-30 touch-manipulation"
-            aria-label="Decrease quantity"
+            className="w-10 h-10 rounded-full bg-[#f0f2f5] text-[#2481cc] text-xl font-medium disabled:opacity-30 touch-manipulation flex items-center justify-center"
+            aria-label="Decrease"
           >
             −
           </button>
@@ -624,8 +716,8 @@ export default function MakeSaleForm({
             type="button"
             disabled={cart.length === 0}
             onClick={clearCart}
-            className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 disabled:opacity-30 touch-manipulation flex items-center justify-center"
-            aria-label="Clear order"
+            className="w-10 h-10 rounded-full bg-[#f0f2f5] text-[#8e8e93] disabled:opacity-30 touch-manipulation flex items-center justify-center text-base"
+            aria-label="Clear"
           >
             🗑
           </button>
@@ -637,9 +729,9 @@ export default function MakeSaleForm({
               setPayOpen(true)
               setMessage(null)
             }}
-            className="flex-1 h-11 rounded-xl bg-rose-400 hover:bg-rose-500 disabled:opacity-40 text-white font-semibold text-sm touch-manipulation shadow-sm"
+            className="flex-1 h-11 rounded-full bg-[#2AABEE] hover:bg-[#229ed9] disabled:opacity-40 text-white font-semibold text-[15px] touch-manipulation shadow-sm"
           >
-            {isPending ? '…' : cart.length === 0 ? '×' : `Pay ${total.toFixed(2)}`}
+            {isPending ? '…' : cart.length === 0 ? 'Pay' : `Pay ${total.toFixed(2)}`}
           </button>
         </div>
       </div>
@@ -708,10 +800,10 @@ export default function MakeSaleForm({
       {/* Message toast */}
       {message && (
         <div
-          className={`fixed left-1/2 -translate-x-1/2 z-[60] max-w-[90vw] px-4 py-3 rounded-xl shadow-lg text-sm ${
+          className={`fixed left-1/2 -translate-x-1/2 z-[60] max-w-[90vw] px-4 py-3 rounded-2xl shadow-lg text-[14px] ${
             message.type === 'ok'
-              ? 'bg-emerald-50 border border-emerald-300 text-emerald-900'
-              : 'bg-red-50 border border-red-300 text-red-900'
+              ? 'bg-[#e7f3fb] border border-[#2AABEE]/30 text-[#0a5a8a]'
+              : 'bg-[#fdecea] border border-red-200 text-[#c0392b]'
           } bottom-24 md:bottom-20`}
         >
           {message.text}

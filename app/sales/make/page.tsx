@@ -32,22 +32,22 @@ export default async function MakeSalePage() {
     <div className="w-full flex flex-col flex-1 min-h-0 md:px-4 md:py-2">
       <div className="hidden md:flex items-center justify-between gap-4 max-w-[1400px] mx-auto px-1 w-full mb-2">
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-bold text-white">Make Sale</h1>
+          <h1 className="text-lg font-bold text-slate-900">Make Sale</h1>
           <p className="text-xs text-slate-500">
             POS terminal — select group, add items, pay
           </p>
         </div>
         <Link
           href="/sales/pos"
-          className="text-sm px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
+          className="text-sm px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 transition"
         >
           ← Back
         </Link>
       </div>
 
       {/* Mobile top link only */}
-      <div className="md:hidden flex items-center justify-between px-3 py-1.5 border-b border-slate-800/80 bg-slate-950">
-        <Link href="/sales/pos" className="text-xs text-slate-400 active:text-white py-1">
+      <div className="md:hidden flex items-center justify-between px-3 py-1.5 border-b border-slate-200 bg-white">
+        <Link href="/sales/pos" className="text-xs text-slate-500 active:text-slate-900 py-1">
           ← Back
         </Link>
         <span className="text-xs text-slate-500">Make Sale</span>
