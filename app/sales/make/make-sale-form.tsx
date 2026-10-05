@@ -27,6 +27,7 @@ type CartItem = {
   name: string
   sku: string
   unitPrice: number
+  cost: number
   quantity: number
   maxStock: number
 }
@@ -161,6 +162,7 @@ export default function MakeSaleForm({
           name: p.name,
           sku: p.sku,
           unitPrice: p.price,
+          cost: p.cost,
           quantity: 1,
           maxStock: p.stock_qty,
         },
@@ -178,6 +180,23 @@ export default function MakeSaleForm({
       next[index] = { ...item, quantity: q }
       return next
     })
+  }
+
+  function updateUnitPrice(index: number, price: number) {
+    setCart((prev) => {
+      const next = [...prev]
+      const item = next[index]
+      if (!item) return prev
+      const p = Number.isFinite(price) && price >= 0 ? price : 0
+      next[index] = { ...item, unitPrice: p }
+      return next
+    })
+  }
+
+  function addFromDropdown(productId: string) {
+    if (!productId) return
+    const p = products.find((x) => x.id === productId)
+    if (p) addToCart(p)
   }
 
   function removeFromCart(index: number) {
@@ -359,7 +378,7 @@ export default function MakeSaleForm({
     if (cart.length === 0) {
       return (
         <p className="text-center text-slate-500 text-sm py-10 px-4">
-          Tap products to add them to the bill
+          Select a product from the dropdown or tap products to add them to the bill
         </p>
       )
     }
@@ -367,53 +386,77 @@ export default function MakeSaleForm({
       <>
         {cart.map((item, index) => {
           const lineTotal = item.unitPrice * item.quantity
+          const margin =
+            item.unitPrice > 0
+              ? (((item.unitPrice - item.cost) / item.unitPrice) * 100).toFixed(0)
+              : '—'
           return (
             <div
               key={`${item.productId}-${index}`}
-              className={`flex items-center gap-2 px-3 py-3 border-b border-slate-800/80 ${
+              className={`flex flex-col gap-2 px-3 py-3 border-b border-slate-800/80 ${
                 compact ? 'text-sm' : 'text-base'
               }`}
             >
-              <div className="flex-1 min-w-0">
-                <div className="text-white font-medium truncate">{item.name}</div>
-                <div className="text-xs text-slate-500 mt-0.5">
-                  {item.unitPrice.toFixed(2)} each
+              <div className="flex items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="text-white font-medium truncate">{item.name}</div>
+                  <div className="text-xs text-slate-500 mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
+                    <span>Cost: {item.cost.toFixed(2)}</span>
+                    <span className="text-slate-600">·</span>
+                    <span>Margin: {margin}%</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeFromCart(index)}
+                  className="w-8 h-8 rounded-lg text-slate-500 active:text-red-400 touch-manipulation shrink-0"
+                  aria-label="Remove"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <label className="flex items-center gap-1.5 text-xs text-slate-400">
+                  <span className="shrink-0">Price</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={item.unitPrice}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value)
+                      updateUnitPrice(index, isNaN(v) ? 0 : v)
+                    }}
+                    className="w-20 rounded-lg bg-slate-800 border border-slate-600 px-2 py-1.5 text-sm text-white font-medium focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  />
+                </label>
+                <div className="flex items-center gap-1 shrink-0 ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (item.quantity <= 1) removeFromCart(index)
+                      else updateQty(index, item.quantity - 1)
+                    }}
+                    className="w-9 h-9 rounded-lg bg-slate-700 active:bg-slate-600 text-white text-lg font-medium touch-manipulation"
+                  >
+                    −
+                  </button>
+                  <span className="w-8 text-center text-white font-semibold">
+                    {item.quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => updateQty(index, item.quantity + 1)}
+                    disabled={item.quantity >= item.maxStock}
+                    className="w-9 h-9 rounded-lg bg-slate-700 active:bg-slate-600 disabled:opacity-30 text-white text-lg font-medium touch-manipulation"
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="w-16 text-right text-white font-semibold shrink-0">
+                  {lineTotal.toFixed(0)}
                 </div>
               </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (item.quantity <= 1) removeFromCart(index)
-                    else updateQty(index, item.quantity - 1)
-                  }}
-                  className="w-9 h-9 rounded-lg bg-slate-700 active:bg-slate-600 text-white text-lg font-medium touch-manipulation"
-                >
-                  −
-                </button>
-                <span className="w-8 text-center text-white font-semibold">
-                  {item.quantity}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => updateQty(index, item.quantity + 1)}
-                  disabled={item.quantity >= item.maxStock}
-                  className="w-9 h-9 rounded-lg bg-slate-700 active:bg-slate-600 disabled:opacity-30 text-white text-lg font-medium touch-manipulation"
-                >
-                  +
-                </button>
-              </div>
-              <div className="w-16 text-right text-white font-semibold shrink-0">
-                {lineTotal.toFixed(0)}
-              </div>
-              <button
-                type="button"
-                onClick={() => removeFromCart(index)}
-                className="w-8 h-8 rounded-lg text-slate-500 active:text-red-400 touch-manipulation"
-                aria-label="Remove"
-              >
-                ✕
-              </button>
             </div>
           )
         })}
@@ -463,8 +506,8 @@ export default function MakeSaleForm({
         </div>
       </div>
 
-      {/* Search */}
-      <div className="px-3 pt-2 pb-1.5 shrink-0">
+      {/* Search + product dropdown */}
+      <div className="px-3 pt-2 pb-1.5 shrink-0 space-y-2">
         <input
           type="search"
           value={productSearch}
@@ -477,6 +520,26 @@ export default function MakeSaleForm({
           enterKeyHint="search"
           autoComplete="off"
         />
+        <div className="flex gap-2 items-stretch">
+          <select
+            value=""
+            onChange={(e) => {
+              addFromDropdown(e.target.value)
+              e.target.value = ''
+            }}
+            className="flex-1 rounded-xl bg-slate-900/90 border border-slate-600 px-3 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500 touch-manipulation min-h-[44px]"
+            aria-label="Select product to add"
+          >
+            <option value="" disabled>
+              — Select product to add —
+            </option>
+            {filteredProducts.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} · {p.price.toFixed(0)} · cost {p.cost.toFixed(0)} · stk {p.stock_qty}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Category chips — horizontal scroll (mobile-friendly) */}
@@ -557,10 +620,15 @@ export default function MakeSaleForm({
                     <span className="truncate">{p.sku || '—'}</span>
                     <span className="shrink-0">Stk {p.stock_qty}</span>
                   </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-emerald-400 font-bold text-base">
-                      {p.price.toFixed(0)}
-                    </span>
+                  <div className="mt-2 flex items-center justify-between gap-1">
+                    <div className="flex flex-col">
+                      <span className="text-emerald-400 font-bold text-base leading-tight">
+                        {p.price.toFixed(0)}
+                      </span>
+                      <span className="text-[10px] text-slate-500">
+                        cost {p.cost.toFixed(0)}
+                      </span>
+                    </div>
                     {inCartQty > 0 && (
                       <span className="text-xs bg-sky-600 text-white px-2 py-0.5 rounded-full font-semibold">
                         ×{inCartQty}
