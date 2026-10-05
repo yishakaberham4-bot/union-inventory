@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { logNotification } from '@/app/actions/notifications'
 
 export interface Product {
   id: string
@@ -208,6 +209,7 @@ export async function createProduct(formData: FormData) {
   if (error) return { error: friendlyError(error.message) }
 
   // Log initial stock as an "add" movement when qty > 0
+  let createdId: string | null = null
   if (stock_qty > 0) {
     const { data: created } = await admin
       .from('products')
@@ -217,6 +219,7 @@ export async function createProduct(formData: FormData) {
       .limit(1)
       .maybeSingle()
     if (created?.id) {
+      createdId = created.id
       await logStockMovement(admin, {
         product_id: created.id,
         product_name: name,
@@ -228,6 +231,14 @@ export async function createProduct(formData: FormData) {
       })
     }
   }
+
+  await logNotification({
+    type: 'product_added',
+    title: 'Product added',
+    message: `${name} (${sku}) — stock ${stock_qty}, price ${price}`,
+    entity_id: createdId,
+    entity_name: name,
+  })
 
   revalidateInventory()
   revalidatePath('/admin/inventory/stock/report')
@@ -271,6 +282,14 @@ export async function updateProduct(formData: FormData) {
     .eq('id', id)
 
   if (error) return { error: friendlyError(error.message) }
+
+  await logNotification({
+    type: 'product_edited',
+    title: 'Product updated',
+    message: `${name} (${sku}) — price ${price}, stock ${isNaN(stock_qty) ? '—' : stock_qty}`,
+    entity_id: id,
+    entity_name: name,
+  })
 
   revalidateInventory()
   redirect('/admin/inventory')
@@ -320,6 +339,14 @@ export async function adjustStock(formData: FormData) {
     new_qty: newQty,
   })
 
+  await logNotification({
+    type: 'stock_adjusted',
+    title: 'Stock adjusted',
+    message: `${product.name || id}: ${previousQty} → ${newQty} (${mode})`,
+    entity_id: id,
+    entity_name: product.name || '',
+  })
+
   revalidateInventory()
   revalidatePath('/admin/inventory/stock/report')
   return { success: true, stock_qty: newQty }
@@ -349,6 +376,15 @@ export async function updatePrice(formData: FormData) {
   const { error } = await admin.from('products').update(payload).eq('id', id)
 
   if (error) return { error: friendlyError(error.message) }
+
+  await logNotification({
+    type: 'price_updated',
+    title: 'Price updated',
+    message: `Product ${id}: sell price set to ${price}${
+      cost !== undefined && !isNaN(cost) ? `, cost ${cost}` : ''
+    }`,
+    entity_id: id,
+  })
 
   revalidateInventory()
   return { success: true }
@@ -383,9 +419,26 @@ export async function deleteProduct(formData: FormData) {
   if (!id) return { error: 'Product ID is required' }
 
   const admin = getAdminClient()
+  // Fetch name before delete for notification
+  const { data: existing } = await admin
+    .from('products')
+    .select('id, name, sku')
+    .eq('id', id)
+    .maybeSingle()
+
   const { error } = await admin.from('products').delete().eq('id', id)
 
   if (error) return { error: friendlyError(error.message) }
+
+  await logNotification({
+    type: 'product_deleted',
+    title: 'Product deleted',
+    message: existing
+      ? `${existing.name} (${existing.sku || id}) was removed`
+      : `Product ${id} was removed`,
+    entity_id: id,
+    entity_name: existing?.name ?? null,
+  })
 
   revalidateInventory()
   redirect('/admin/inventory')

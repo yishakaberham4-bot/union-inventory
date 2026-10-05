@@ -7,6 +7,7 @@ import { logoutAdmin } from '@/app/actions/auth'
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: '🏠' },
+  { href: '/admin/notifications', label: 'Notifications', icon: '🔔' },
   { href: '/admin/profile', label: 'Profile', icon: '👤' },
   { href: '/admin/users', label: 'Users', icon: '👥' },
   {
@@ -59,7 +60,13 @@ function ThreeLineIcon({ open }: { open: boolean }) {
   )
 }
 
-export default function AdminSidebar({ staffLabel }: { staffLabel: string }) {
+export default function AdminSidebar({
+  staffLabel,
+  unreadCount = 0,
+}: {
+  staffLabel: string
+  unreadCount?: number
+}) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
 
@@ -105,6 +112,22 @@ export default function AdminSidebar({ staffLabel }: { staffLabel: string }) {
       >
         <ThreeLineIcon open={open} />
       </button>
+
+      {/* Notification bell — always visible */}
+      <Link
+        href="/admin/notifications"
+        className="fixed top-4 left-[4.25rem] z-[60] flex items-center justify-center w-11 h-11 rounded-xl border shadow-lg bg-slate-800 border-slate-600 text-slate-100 hover:bg-slate-700 hover:border-slate-500 transition"
+        aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+      >
+        <span className="text-lg relative">
+          🔔
+          {unreadCount > 0 && (
+            <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none border border-slate-900">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </span>
+      </Link>
 
       {/* Dark overlay when menu is open */}
       <div
@@ -189,8 +212,8 @@ export default function AdminSidebar({ staffLabel }: { staffLabel: string }) {
         </div>
       </aside>
 
-      {/* Spacer so page content is not under the floating button */}
-      <div className="h-4" />
+      {/* Spacer so page content is not under the floating buttons */}
+      <div className="h-16" />
     </>
   )
 }

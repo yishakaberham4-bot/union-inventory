@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import AdminSidebar from './admin-sidebar'
+import { getUnreadNotificationCount } from '@/app/actions/notifications'
 
 export default async function AdminLayout({
   children,
@@ -39,9 +40,16 @@ export default async function AdminLayout({
     user.email?.split('@')[0]?.toUpperCase() ||
     'Admin'
 
+  let unreadCount = 0
+  try {
+    unreadCount = await getUnreadNotificationCount()
+  } catch {
+    unreadCount = 0
+  }
+
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-slate-950 text-slate-100">
-      <AdminSidebar staffLabel={staffLabel} />
+      <AdminSidebar staffLabel={staffLabel} unreadCount={unreadCount} />
       <main className="flex-1 min-w-0 overflow-x-auto pb-2">{children}</main>
     </div>
   )

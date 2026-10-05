@@ -68,7 +68,7 @@ export async function getAvailableProductsForSale() {
   // Do not filter is_active = true only — null should still show
   const { data, error } = await admin
     .from('products')
-    .select('id, sku, name, price, cost, stock_qty, is_active')
+    .select('id, sku, name, price, cost, stock_qty, is_active, category')
     .gt('stock_qty', 0)
     .order('name', { ascending: true })
 
@@ -83,6 +83,7 @@ export async function getAvailableProductsForSale() {
       price: Number(row.price) || 0,
       cost: row.cost != null ? Number(row.cost) : 0,
       stock_qty: Number(row.stock_qty) || 0,
+      category: (row.category as string) || null,
     }))
 }
 
@@ -791,5 +792,78 @@ export async function payCreditSale(
     return {
       error: e instanceof Error ? e.message : 'Failed to pay credit',
     }
+  }
+}
+
+/** Last N days of sales for POS chart (revenue + count per day) */
+export async function getSalesChartSummary(days = 7): Promise<{
+  days: { date: string; label: string; revenue: number; count: number }[]
+  todayRevenue: number
+  todayCount: number
+  weekRevenue: number
+  weekCount: number
+}> {
+  const admin = getAdminClient()
+  const end = new Date()
+  const start = new Date()
+  start.setDate(start.getDate() - (days - 1))
+  start.setHours(0, 0, 0, 0)
+
+  const fromStr = start.toISOString().slice(0, 10)
+  // inclusive end: next day exclusive
+  const toDate = new Date(end)
+  toDate.setDate(toDate.getDate() + 1)
+  const toStr = toDate.toISOString().slice(0, 10)
+
+  const { data, error } = await admin
+    .from('sales')
+    .select('total_amount, created_at')
+    .gte('created_at', `${fromStr}T00:00:00.000Z`)
+    .lt('created_at', `${toStr}T00:00:00.000Z`)
+    .order('created_at', { ascending: true })
+    .limit(5000)
+
+  if (error) {
+    // soft fail — chart empty
+    console.warn('[getSalesChartSummary]', error.message)
+  }
+
+  const buckets: { date: string; label: string; revenue: number; count: number }[] =
+    []
+  for (let i = 0; i < days; i++) {
+    const d = new Date(start)
+    d.setDate(start.getDate() + i)
+    const key = d.toISOString().slice(0, 10)
+    const label = d.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'numeric',
+      day: 'numeric',
+    })
+    buckets.push({ date: key, label, revenue: 0, count: 0 })
+  }
+  const map = new Map(buckets.map((b) => [b.date, b]))
+
+  for (const row of data || []) {
+    const created = row.created_at as string | null
+    if (!created) continue
+    const key = created.slice(0, 10)
+    const b = map.get(key)
+    if (b) {
+      b.revenue += Number(row.total_amount) || 0
+      b.count += 1
+    }
+  }
+
+  const todayKey = end.toISOString().slice(0, 10)
+  const today = map.get(todayKey)
+  const weekRevenue = buckets.reduce((s, b) => s + b.revenue, 0)
+  const weekCount = buckets.reduce((s, b) => s + b.count, 0)
+
+  return {
+    days: buckets,
+    todayRevenue: today?.revenue ?? 0,
+    todayCount: today?.count ?? 0,
+    weekRevenue,
+    weekCount,
   }
 }

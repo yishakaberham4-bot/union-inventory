@@ -1,0 +1,60 @@
+'use server'
+
+import bcrypt from 'bcryptjs'
+import { createServiceClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
+
+export type AddUserResult =
+  | { success: true; message: string }
+  | { success: false; message: string }
+
+export async function addUser(formData: {
+  id: string
+  name: string
+  phone: string
+  accessLevel: string
+  password: string
+}): Promise<AddUserResult> {
+  const { id, name, phone, accessLevel, password } = formData
+
+  if (!id || !name || !phone || !accessLevel || !password) {
+    return { success: false, message: 'Please fill in all fields' }
+  }
+
+  if (password.length < 6) {
+    return { success: false, message: 'Password must be at least 6 characters' }
+  }
+
+  const allowed = ['fnb', 'purchaser', 'bar', 'kitchen', 'store']
+  if (!allowed.includes(accessLevel)) {
+    return { success: false, message: 'Invalid access level' }
+  }
+
+  try {
+    const supabase = createServiceClient()
+    const password_hash = await bcrypt.hash(password, 10)
+
+    const { error } = await supabase.from('users').insert({
+      id: id.trim(),
+      name: name.trim(),
+      phone: phone.trim(),
+      access_level: accessLevel,
+      password_hash,
+    })
+
+    if (error) {
+      // Unique constraint violation
+      if (error.code === '23505') {
+        return { success: false, message: 'A user with this ID already exists' }
+      }
+      console.error('Supabase error:', error)
+      return { success: false, message: error.message }
+    }
+
+    revalidatePath('/admin/add-users')
+    return { success: true, message: `User "${name}" added successfully` }
+  } catch (err) {
+    console.error(err)
+    return { success: false, message: 'Something went wrong. Please try again.' }
+  }
+}
