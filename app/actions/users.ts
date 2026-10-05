@@ -352,3 +352,199 @@ export async function deleteUser(id: string) {
   revalidatePath('/admin/users')
   return { success: true }
 }
+
+/** Payload used by /admin/add-users page */
+export type AddUserInput = {
+  id: string
+  name: string
+  phone?: string
+  accessLevel: string
+  password: string
+}
+
+/**
+ * Create a staff user from the Add Users form.
+ * Returns { success, message } (no redirect) for client forms.
+ */
+export async function addUser(
+  input: AddUserInput
+): Promise<{ success: boolean; message: string }> {
+  const staffId = String(input.id || '')
+    .trim()
+    .toUpperCase()
+  const fullName = String(input.name || '').trim()
+  const password = String(input.password || '')
+  const accessLevel = String(input.accessLevel || '')
+    .trim()
+    .toLowerCase()
+  const phone = String(input.phone || '').trim() || null
+
+  if (!staffId || !fullName || !password || !accessLevel) {
+    return { success: false, message: 'All fields are required' }
+  }
+  if (password.length < 6) {
+    return { success: false, message: 'Password must be at least 6 characters' }
+  }
+
+  const allowed = ['fnb', 'purchaser', 'bar', 'kitchen', 'store', 'sales', 'admin']
+  if (!allowed.includes(accessLevel)) {
+    return { success: false, message: 'Invalid access level' }
+  }
+
+  // Map access level → auth metadata role + DB role
+  const appRole = accessLevel === 'admin' ? 'admin' : 'sales'
+  const dbRole = toDbRole(appRole)
+  const email = `${staffId.toLowerCase()}@unioninventory.local`
+
+  let admin
+  try {
+    admin = getAdminClient()
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err?.message || 'Admin client configuration error',
+    }
+  }
+
+  const { data: authData, error: authError } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      staff_id: staffId,
+      full_name: fullName,
+      role: appRole,
+      access_level: accessLevel,
+      phone,
+    },
+  })
+
+  if (authError) {
+    return { success: false, message: friendlyError(authError.message, staffId) }
+  }
+
+  const userId = authData?.user?.id
+  if (!userId) {
+    return { success: false, message: 'Auth user created but no id returned' }
+  }
+
+  const { error: usersError } = await admin.from('users').insert({
+    id: userId,
+    email,
+    role: dbRole,
+    email_verified_at: new Date().toISOString(),
+  })
+
+  if (usersError) {
+    try {
+      await admin.auth.admin.deleteUser(userId)
+    } catch {}
+    return {
+      success: false,
+      message: friendlyError(usersError.message, staffId),
+    }
+  }
+
+  const { error: profileError } = await admin.from('profiles').insert({
+    id: randomUUID(),
+    user_id: userId,
+    full_name: fullName,
+  })
+
+  if (profileError) {
+    try {
+      await admin.from('users').delete().eq('id', userId)
+      await admin.auth.admin.deleteUser(userId)
+    } catch {}
+    return {
+      success: false,
+      message: friendlyError(profileError.message, staffId),
+    }
+  }
+
+  revalidatePath('/admin/users')
+  revalidatePath('/admin/add-users')
+  return {
+    success: true,
+    message: `User ${staffId} (${fullName}) created with access: ${accessLevel}`,
+  }
+}
+
+/**
+ * Login for F&B (and similar) terminals.
+ * loginId = staff ID, accessLevel e.g. 'fnb'
+ */
+export async function loginUser(
+  loginId: string,
+  password: string,
+  accessLevel?: string
+): Promise<{ success: boolean; message: string; name?: string }> {
+  const staffId = String(loginId || '').trim()
+  const pass = String(password || '')
+
+  if (!staffId || !pass) {
+    return { success: false, message: 'ID and password are required' }
+  }
+
+  const email = `${staffId.toLowerCase()}@unioninventory.local`
+
+  try {
+    // Dynamic import so this file still works if path aliases differ in tools
+    const { createClient } = await import('@/lib/supabase/server')
+    const supabase = await createClient()
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password: pass,
+    })
+
+    if (error || !data.user) {
+      return { success: false, message: 'Invalid ID or password' }
+    }
+
+    const user = data.user
+    const metaRole = (user.user_metadata?.role as string) || ''
+    const metaAccess = (
+      (user.user_metadata?.access_level as string) ||
+      metaRole ||
+      ''
+    ).toLowerCase()
+    const fullName =
+      (user.user_metadata?.full_name as string) ||
+      staffId
+
+    // Optional: require matching access level when provided
+    if (accessLevel) {
+      const required = accessLevel.trim().toLowerCase()
+      // Allow if access_level matches, or user is sales/fnb broadly for fnb terminal
+      const ok =
+        metaAccess === required ||
+        (required === 'fnb' &&
+          ['fnb', 'sales', 'user', ''].includes(metaAccess)) ||
+        metaRole === 'admin'
+      if (!ok && metaAccess && metaAccess !== 'admin') {
+        // Soft check: still allow login but warn — or reject
+        // Reject if they have a different specific terminal role
+        const terminalRoles = ['fnb', 'purchaser', 'bar', 'kitchen', 'store']
+        if (terminalRoles.includes(metaAccess) && metaAccess !== required) {
+          await supabase.auth.signOut()
+          return {
+            success: false,
+            message: `This account is for ${metaAccess}, not ${required}`,
+          }
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Login successful',
+      name: fullName,
+    }
+  } catch (e: any) {
+    return {
+      success: false,
+      message: e?.message || 'Login failed',
+    }
+  }
+}
