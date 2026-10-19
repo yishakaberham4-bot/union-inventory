@@ -29,26 +29,30 @@ export default async function MakeSalePage() {
   }
 
   return (
-    <div className="w-full flex flex-col flex-1 min-h-0 md:px-4 md:py-3 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 md:bg-none">
-      <div className="hidden md:flex items-center justify-between gap-4 max-w-[1400px] mx-auto px-1 w-full mb-3">
+    <div className="w-full flex flex-col flex-1 min-h-0 md:px-4 md:py-2">
+      <div className="hidden md:flex items-center justify-between gap-4 max-w-[1400px] mx-auto px-1 w-full mb-2">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-white tracking-tight drop-shadow">
-            Make Sale
-          </h1>
-          <p className="text-sm text-slate-400">
+          <h1 className="text-lg font-bold text-slate-900">Make Sale</h1>
+          <p className="text-xs text-slate-500">
             POS terminal — select group, add items, pay
           </p>
         </div>
         <Link
           href="/sales/pos"
-          className="text-sm px-4 py-2 rounded-xl bg-slate-800 border border-slate-600 hover:bg-slate-700 text-slate-100 transition shadow-lg"
+          className="text-sm px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 transition"
         >
           ← Back
         </Link>
       </div>
 
-      {/* Mobile: header is inside the form */}
-      <div className="md:hidden h-0 overflow-hidden" aria-hidden />
+      {/* Mobile top link only */}
+      <div className="md:hidden flex items-center justify-between px-3 py-1.5 border-b border-slate-200 bg-white">
+        <Link href="/sales/pos" className="text-xs text-slate-500 active:text-slate-900 py-1">
+          ← Back
+        </Link>
+        <span className="text-xs text-slate-500">Make Sale</span>
+        <span className="w-10" />
+      </div>
 
       {loadError ? (
         <div className="max-w-xl mx-auto m-4 rounded-2xl border border-red-800/50 bg-red-950/40 p-5 text-red-200 text-sm space-y-2">

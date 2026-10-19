@@ -3,8 +3,8 @@ import { Suspense } from 'react'
 import { getSalesReport, type SaleRow } from '@/app/actions/sales'
 import ReportFilters from '../report-filters'
 import { parseDateRange } from '../report-utils'
-import PayCreditButton from './pay-button'
-import { checkAndNotifyOverdueCreditsDebits } from '@/app/actions/notifications'
+import PayCreditButton from '../debit/pay-button'
+import { checkAndNotifyOverdueCredits } from '@/app/actions/notifications'
 
 function formatMoney(n: number) {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -28,19 +28,19 @@ export default async function AdminCreditReportPage({
   const { from, to, label } = parseDateRange(sp)
   const hasRange = !!(sp.from || sp.to)
 
+  // Opportunistically scan for overdue credits (non-blocking for page render)
+  try {
+    await checkAndNotifyOverdueCredits()
+  } catch {
+    // ignore scan errors
+  }
+
   let sales: SaleRow[] = []
   let error: string | null = null
   try {
     sales = await getSalesReport({ limit: 5000, from, to })
   } catch (e) {
     error = e instanceof Error ? e.message : 'Failed to load credit data'
-  }
-
-  // Notify if any credit/debit has been outstanding more than a week
-  try {
-    await checkAndNotifyOverdueCreditsDebits()
-  } catch {
-    // non-blocking
   }
 
   let creditSales = sales.filter((s) => (s.sale_type || '').startsWith('credit'))
@@ -210,7 +210,9 @@ export default async function AdminCreditReportPage({
                     <td className="px-3 py-2 text-white">
                       {s.credit_customer_name || '—'}
                       {s.credit_phone && (
-                        <span className="block text-xs text-slate-500">{s.credit_phone}</span>
+                        <span className="block text-xs text-slate-500">
+                          {s.credit_phone}
+                        </span>
                       )}
                     </td>
                     <td className="px-3 py-2 text-slate-300">{s.product_name}</td>
@@ -219,7 +221,9 @@ export default async function AdminCreditReportPage({
                         {s.sale_type}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-right">{formatMoney(s.total_amount)}</td>
+                    <td className="px-3 py-2 text-right">
+                      {formatMoney(s.total_amount)}
+                    </td>
                     <td className="px-3 py-2 text-right text-amber-300">
                       {formatMoney(creditAmt)}
                     </td>
@@ -229,7 +233,7 @@ export default async function AdminCreditReportPage({
                     <td className="px-3 py-2 text-right">
                       <PayCreditButton
                         saleId={s.id}
-                        productName={s.product_name || 'item'}
+                        productName={s.product_name}
                         outstanding={outstanding}
                       />
                     </td>

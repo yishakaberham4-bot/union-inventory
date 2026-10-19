@@ -645,11 +645,17 @@ export async function returnSale(
     const name = (sale.product_name as string) || 'product'
     await logNotification({
       type: 'sale_returned',
-      title: 'Sale returned',
-      message: `Returned ${qty} × ${name} to stock${reason ? ` — ${reason}` : ''}. Removed from reports.`,
+      title: 'Product returned',
+      message: `Returned ${qty} × ${name} to stock${
+        reason ? ` — reason: ${reason}` : ''
+      }`,
       entity_id: saleId,
       entity_name: name,
-      actor: returnedByLabel,
+      actor:
+        (user.user_metadata?.staff_id as string) ||
+        user.email?.split('@')[0] ||
+        user.email ||
+        null,
     })
 
     return {
@@ -789,22 +795,25 @@ export async function payCreditSale(
       return { error: friendlyError(updErr.message) }
     }
 
+    const customer =
+      (sale.credit_customer_name as string) ||
+      (sale.credit_phone as string) ||
+      'customer'
+    const productName = (sale.product_name as string) || 'sale'
+    await logNotification({
+      type: 'credit_paid',
+      title: 'Credit payment received',
+      message: `Paid ${outstanding.toFixed(2)} for ${productName} (${customer})`,
+      entity_id: saleId,
+      entity_name: productName,
+      actor: user.email || user.id,
+    })
+
     revalidatePath('/admin/sales/debit')
     revalidatePath('/admin/sales/credit')
     revalidatePath('/admin/sales/report')
     revalidatePath('/admin/sales')
     revalidatePath('/admin/notifications')
-
-    const customer = (sale.credit_customer_name as string) || 'customer'
-    const productName = (sale.product_name as string) || 'item'
-    await logNotification({
-      type: 'credit_paid',
-      title: 'Credit paid',
-      message: `${customer} — ${productName}: ${outstanding.toFixed(2)} marked as paid`,
-      entity_id: saleId,
-      entity_name: customer,
-      actor: user.email || user.id,
-    })
 
     return {
       success: true,

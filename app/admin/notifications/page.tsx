@@ -5,7 +5,7 @@ import {
   markNotificationRead,
   deleteNotification,
   createTestNotification,
-  checkAndNotifyOverdueCreditsDebits,
+  checkAndNotifyOverdueCredits,
 } from '@/app/actions/notifications'
 
 function typeBadge(type: string) {
@@ -15,11 +15,11 @@ function typeBadge(type: string) {
     product_deleted: 'bg-red-900/60 text-red-300 border-red-700/50',
     stock_adjusted: 'bg-amber-900/60 text-amber-300 border-amber-700/50',
     price_updated: 'bg-violet-900/60 text-violet-300 border-violet-700/50',
-    credit_paid: 'bg-emerald-900/60 text-emerald-200 border-emerald-600/50',
-    debit_paid: 'bg-teal-900/60 text-teal-200 border-teal-600/50',
-    sale_returned: 'bg-orange-900/60 text-orange-200 border-orange-700/50',
-    credit_overdue: 'bg-red-950/80 text-red-200 border-red-600/60',
-    debit_overdue: 'bg-rose-950/80 text-rose-200 border-rose-600/60',
+    credit_paid: 'bg-emerald-900/60 text-emerald-300 border-emerald-700/50',
+    debit_paid: 'bg-teal-900/60 text-teal-300 border-teal-700/50',
+    sale_returned: 'bg-orange-900/60 text-orange-300 border-orange-700/50',
+    credit_overdue: 'bg-red-900/70 text-red-200 border-red-600/60',
+    debit_overdue: 'bg-rose-900/70 text-rose-200 border-rose-600/60',
     other: 'bg-slate-800 text-slate-300 border-slate-600',
   }
   const label: Record<string, string> = {
@@ -60,9 +60,9 @@ function formatWhen(iso: string) {
 
 export default async function NotificationsPage() {
   try {
-    await checkAndNotifyOverdueCreditsDebits()
+    await checkAndNotifyOverdueCredits()
   } catch {
-    // non-blocking
+    // ignore
   }
   const { items: notifications, error, tableMissing } = await getNotifications(100)
   const unread = notifications.filter((n) => !n.is_read).length
@@ -75,7 +75,7 @@ export default async function NotificationsPage() {
             <span>🔔</span> Notifications
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Product and inventory changes from the admin panel
+            Product, stock, payments, returns & overdue credit/debit alerts
             {unread > 0 && (
               <span className="ml-2 text-amber-400 font-medium">
                 · {unread} unread

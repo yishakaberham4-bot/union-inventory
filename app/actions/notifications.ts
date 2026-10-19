@@ -214,123 +214,135 @@ export async function createTestNotification() {
   })
 }
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000
-
 /**
- * Scan open customer credits and supplier debits older than 7 days.
- * Creates at most one overdue notification per entity per day (idempotent via title+entity).
- * Call from credit/debit pages or notifications page.
+ * Scan outstanding credit sales and debit (purchase) credits older than 7 days
+ * and create notifications if none were logged recently for the same entity.
+ * Call from admin pages (credit / debit / notifications) so it runs opportunistically.
  */
-export async function checkAndNotifyOverdueCreditsDebits(): Promise<{
-  creditNotified: number
-  debitNotified: number
+export async function checkAndNotifyOverdueCredits(): Promise<{
+  created: number
   error?: string
 }> {
   try {
     const admin = getAdminClient()
-    const cutoff = new Date(Date.now() - WEEK_MS).toISOString()
-    let creditNotified = 0
-    let debitNotified = 0
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    const weekAgoIso = weekAgo.toISOString()
 
-    // Customer credit sales still outstanding
-    const { data: creditSales, error: cErr } = await admin
+    let created = 0
+
+    // --- Credit sales (customer owes us) older than 7 days with outstanding balance ---
+    const { data: creditSales, error: salesErr } = await admin
       .from('sales')
       .select(
-        'id, product_name, credit_customer_name, credit_phone, credit_amount, total_amount, paid_amount, created_at, sale_type'
+        'id, product_name, credit_customer_name, credit_phone, credit_amount, paid_amount, total_amount, created_at, sale_type'
       )
       .like('sale_type', 'credit%')
-      .lt('created_at', cutoff)
+      .lt('created_at', weekAgoIso)
       .limit(200)
 
-    if (!cErr && creditSales) {
+    if (salesErr) {
+      console.error('[notifications] overdue sales scan:', salesErr.message)
+    } else if (creditSales?.length) {
       for (const s of creditSales) {
-        const credit =
+        const creditAmt =
           s.credit_amount != null
             ? Number(s.credit_amount)
             : Number(s.total_amount || 0)
         const paid = Number(s.paid_amount || 0)
-        const outstanding = Math.max(0, credit - paid)
+        const outstanding = Math.max(0, creditAmt - paid)
         if (outstanding <= 0) continue
 
-        const days = Math.floor(
-          (Date.now() - new Date(s.created_at).getTime()) / (24 * 60 * 60 * 1000)
-        )
-        const title = `Credit overdue (${days}d)`
-        // Avoid spam: skip if a similar unread notification exists for this sale today
-        const todayStart = new Date()
-        todayStart.setHours(0, 0, 0, 0)
+        // Avoid spamming: skip if we already notified this entity for overdue in last 3 days
+        const threeDaysAgo = new Date()
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
         const { data: existing } = await admin
           .from('notifications')
           .select('id')
-          .eq('entity_id', s.id)
           .eq('type', 'credit_overdue')
-          .gte('created_at', todayStart.toISOString())
+          .eq('entity_id', s.id)
+          .gte('created_at', threeDaysAgo.toISOString())
           .limit(1)
 
         if (existing && existing.length > 0) continue
 
-        const customer = s.credit_customer_name || 'Unknown'
+        const customer =
+          (s.credit_customer_name as string) ||
+          (s.credit_phone as string) ||
+          'Unknown customer'
+        const days = Math.floor(
+          (Date.now() - new Date(s.created_at as string).getTime()) /
+            (1000 * 60 * 60 * 24)
+        )
         await logNotification({
           type: 'credit_overdue',
-          title,
-          message: `${customer}${s.credit_phone ? ` (${s.credit_phone})` : ''} — ${s.product_name || 'item'} outstanding ${outstanding.toFixed(2)} for ${days} days`,
-          entity_id: s.id,
+          title: 'Credit overdue (>1 week)',
+          message: `${customer} — ${s.product_name || 'sale'} outstanding ${outstanding.toFixed(
+            2
+          )} for ${days} days`,
+          entity_id: s.id as string,
           entity_name: customer,
         })
-        creditNotified++
+        created++
       }
     }
 
-    // Supplier purchase debits still outstanding
-    const { data: products, error: pErr } = await admin
+    // --- Debit purchases (we owe supplier) older than 7 days ---
+    const { data: products, error: prodErr } = await admin
       .from('products')
       .select(
         'id, name, sku, supplier_name, supplier_phone, purchase_credit_amount, purchase_paid_amount, created_at, purchase_type'
       )
       .eq('purchase_type', 'credit')
-      .lt('created_at', cutoff)
+      .lt('created_at', weekAgoIso)
       .limit(200)
 
-    if (!pErr && products) {
+    if (prodErr) {
+      console.error('[notifications] overdue debit scan:', prodErr.message)
+    } else if (products?.length) {
       for (const p of products) {
-        const credit = Number(p.purchase_credit_amount || 0)
+        const creditAmt = Number(p.purchase_credit_amount || 0)
         const paid = Number(p.purchase_paid_amount || 0)
-        const outstanding = Math.max(0, credit - paid)
+        const outstanding = Math.max(0, creditAmt - paid)
         if (outstanding <= 0) continue
 
-        const days = Math.floor(
-          (Date.now() - new Date(p.created_at).getTime()) / (24 * 60 * 60 * 1000)
-        )
-        const todayStart = new Date()
-        todayStart.setHours(0, 0, 0, 0)
+        const threeDaysAgo = new Date()
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
         const { data: existing } = await admin
           .from('notifications')
           .select('id')
-          .eq('entity_id', p.id)
           .eq('type', 'debit_overdue')
-          .gte('created_at', todayStart.toISOString())
+          .eq('entity_id', p.id)
+          .gte('created_at', threeDaysAgo.toISOString())
           .limit(1)
 
         if (existing && existing.length > 0) continue
 
-        const supplier = p.supplier_name || 'Unknown supplier'
+        const supplier =
+          (p.supplier_name as string) ||
+          (p.supplier_phone as string) ||
+          'Unknown supplier'
+        const days = Math.floor(
+          (Date.now() - new Date(p.created_at as string).getTime()) /
+            (1000 * 60 * 60 * 24)
+        )
         await logNotification({
           type: 'debit_overdue',
-          title: `Debit overdue (${days}d)`,
-          message: `${supplier}${p.supplier_phone ? ` (${p.supplier_phone})` : ''} — ${p.name} outstanding ${outstanding.toFixed(2)} for ${days} days`,
-          entity_id: p.id,
-          entity_name: p.name,
+          title: 'Debit overdue (>1 week)',
+          message: `${supplier} — ${p.name || p.sku || 'product'} outstanding ${outstanding.toFixed(
+            2
+          )} for ${days} days`,
+          entity_id: p.id as string,
+          entity_name: p.name as string,
         })
-        debitNotified++
+        created++
       }
     }
 
-    return { creditNotified, debitNotified }
+    return { created }
   } catch (e) {
-    return {
-      creditNotified: 0,
-      debitNotified: 0,
-      error: e instanceof Error ? e.message : 'Overdue check failed',
-    }
+    const msg = e instanceof Error ? e.message : 'Overdue check failed'
+    console.error('[notifications] overdue:', msg)
+    return { created: 0, error: msg }
   }
 }
