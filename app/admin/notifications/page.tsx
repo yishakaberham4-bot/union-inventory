@@ -4,6 +4,8 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   deleteNotification,
+  createTestNotification,
+  checkAndNotifyOverdueCreditsDebits,
 } from '@/app/actions/notifications'
 
 function typeBadge(type: string) {
@@ -13,6 +15,11 @@ function typeBadge(type: string) {
     product_deleted: 'bg-red-900/60 text-red-300 border-red-700/50',
     stock_adjusted: 'bg-amber-900/60 text-amber-300 border-amber-700/50',
     price_updated: 'bg-violet-900/60 text-violet-300 border-violet-700/50',
+    credit_paid: 'bg-emerald-900/60 text-emerald-200 border-emerald-600/50',
+    debit_paid: 'bg-teal-900/60 text-teal-200 border-teal-600/50',
+    sale_returned: 'bg-orange-900/60 text-orange-200 border-orange-700/50',
+    credit_overdue: 'bg-red-950/80 text-red-200 border-red-600/60',
+    debit_overdue: 'bg-rose-950/80 text-rose-200 border-rose-600/60',
     other: 'bg-slate-800 text-slate-300 border-slate-600',
   }
   const label: Record<string, string> = {
@@ -21,6 +28,11 @@ function typeBadge(type: string) {
     product_deleted: 'Deleted',
     stock_adjusted: 'Stock',
     price_updated: 'Price',
+    credit_paid: 'Credit paid',
+    debit_paid: 'Debit paid',
+    sale_returned: 'Returned',
+    credit_overdue: 'Credit overdue',
+    debit_overdue: 'Debit overdue',
     other: 'Other',
   }
   return (
@@ -47,7 +59,12 @@ function formatWhen(iso: string) {
 }
 
 export default async function NotificationsPage() {
-  const notifications = await getNotifications(100)
+  try {
+    await checkAndNotifyOverdueCreditsDebits()
+  } catch {
+    // non-blocking
+  }
+  const { items: notifications, error, tableMissing } = await getNotifications(100)
   const unread = notifications.filter((n) => !n.is_read).length
 
   return (
@@ -66,7 +83,7 @@ export default async function NotificationsPage() {
             )}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {unread > 0 && (
             <form action={markAllNotificationsRead}>
               <button
@@ -74,6 +91,16 @@ export default async function NotificationsPage() {
                 className="text-sm px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition"
               >
                 Mark all read
+              </button>
+            </form>
+          )}
+          {!tableMissing && (
+            <form action={createTestNotification}>
+              <button
+                type="submit"
+                className="text-sm px-3 py-1.5 rounded-lg bg-violet-800/80 hover:bg-violet-700 text-violet-100 border border-violet-600/50 transition"
+              >
+                Send test
               </button>
             </form>
           )}
@@ -86,16 +113,36 @@ export default async function NotificationsPage() {
         </div>
       </div>
 
-      {notifications.length === 0 ? (
-        <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-10 text-center text-slate-400 text-sm space-y-2">
+      {(error || tableMissing) && (
+        <div className="rounded-2xl border border-amber-700/60 bg-amber-950/40 p-5 text-amber-100 text-sm space-y-3">
+          <p className="font-semibold text-amber-200">
+            {tableMissing
+              ? 'Notifications table is missing in the database'
+              : 'Could not load notifications'}
+          </p>
+          {error && (
+            <p className="text-xs text-amber-200/80 font-mono break-all">{error}</p>
+          )}
+          <div className="text-xs text-amber-100/90 space-y-2">
+            <p className="font-medium">Fix — run this once in Supabase SQL Editor:</p>
+            <ol className="list-decimal list-inside space-y-1 text-amber-200/80">
+              <li>Open Supabase Dashboard → SQL Editor → New query</li>
+              <li>Paste the SQL from <code className="text-sky-300">app/admin/notifications/CREATE_NOTIFICATIONS.sql</code></li>
+              <li>Click Run</li>
+              <li>Refresh this page, then click “Send test” or add/edit a product</li>
+            </ol>
+          </div>
+        </div>
+      )}
+
+      {!error && notifications.length === 0 ? (
+        <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-10 text-center text-slate-400 text-sm space-y-3">
           <p className="text-4xl mb-2">🔕</p>
           <p className="font-medium text-slate-300">No notifications yet</p>
           <p className="text-xs max-w-sm mx-auto">
             When you add, edit, delete products or adjust stock/prices, entries
-            appear here. If the list stays empty, run the{' '}
-            <code className="text-sky-400">notifications</code> table SQL from{' '}
-            <code className="text-sky-400">actions/notifications.ts</code> in
-            Supabase.
+            appear here. Use <strong className="text-slate-200">Send test</strong> to
+            verify the table is working.
           </p>
         </div>
       ) : (

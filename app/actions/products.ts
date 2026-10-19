@@ -556,6 +556,17 @@ export async function payProductCredit(
 
     revalidateInventory()
     revalidatePath('/admin/sales/debit')
+    revalidatePath('/admin/notifications')
+
+    await logNotification({
+      type: 'debit_paid',
+      title: 'Debit (supplier credit) paid',
+      message: `${product.name}${product.supplier_name ? ` — supplier ${product.supplier_name}` : ''}: ${outstanding.toFixed(2)} marked as paid`,
+      entity_id: productId,
+      entity_name: product.name as string,
+      actor: user.email || user.id,
+    })
+
     return {
       success: true,
       message: `Purchase credit of ${outstanding.toFixed(2)} marked as paid`,

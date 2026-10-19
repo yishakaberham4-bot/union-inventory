@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
+import { logNotification } from '@/app/actions/notifications'
 
 export interface SaleRow {
   id: string
@@ -642,6 +643,15 @@ export async function returnSale(
     }
 
     const name = (sale.product_name as string) || 'product'
+    await logNotification({
+      type: 'sale_returned',
+      title: 'Sale returned',
+      message: `Returned ${qty} × ${name} to stock${reason ? ` — ${reason}` : ''}. Removed from reports.`,
+      entity_id: saleId,
+      entity_name: name,
+      actor: returnedByLabel,
+    })
+
     return {
       success: true,
       message: `Returned ${qty} × ${name} to stock. Sale removed from all reports.`,
@@ -783,6 +793,18 @@ export async function payCreditSale(
     revalidatePath('/admin/sales/credit')
     revalidatePath('/admin/sales/report')
     revalidatePath('/admin/sales')
+    revalidatePath('/admin/notifications')
+
+    const customer = (sale.credit_customer_name as string) || 'customer'
+    const productName = (sale.product_name as string) || 'item'
+    await logNotification({
+      type: 'credit_paid',
+      title: 'Credit paid',
+      message: `${customer} — ${productName}: ${outstanding.toFixed(2)} marked as paid`,
+      entity_id: saleId,
+      entity_name: customer,
+      actor: user.email || user.id,
+    })
 
     return {
       success: true,

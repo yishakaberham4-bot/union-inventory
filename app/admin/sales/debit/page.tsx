@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getCreditPurchases, type Product } from '@/app/actions/products'
 import PayProductCreditButton from './pay-product-button'
+import { checkAndNotifyOverdueCreditsDebits } from '@/app/actions/notifications'
 
 function formatMoney(n: number) {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -28,6 +29,12 @@ export default async function AdminDebitPage() {
     products = await getCreditPurchases()
   } catch (e) {
     error = e instanceof Error ? e.message : 'Failed to load debit data'
+  }
+
+  try {
+    await checkAndNotifyOverdueCreditsDebits()
+  } catch {
+    // non-blocking
   }
 
   const subtotalQty = products.reduce((sum, p) => sum + (p.stock_qty || 0), 0)

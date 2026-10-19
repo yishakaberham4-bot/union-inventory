@@ -3,6 +3,8 @@ import { Suspense } from 'react'
 import { getSalesReport, type SaleRow } from '@/app/actions/sales'
 import ReportFilters from '../report-filters'
 import { parseDateRange } from '../report-utils'
+import PayCreditButton from './pay-button'
+import { checkAndNotifyOverdueCreditsDebits } from '@/app/actions/notifications'
 
 function formatMoney(n: number) {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -32,6 +34,13 @@ export default async function AdminCreditReportPage({
     sales = await getSalesReport({ limit: 5000, from, to })
   } catch (e) {
     error = e instanceof Error ? e.message : 'Failed to load credit data'
+  }
+
+  // Notify if any credit/debit has been outstanding more than a week
+  try {
+    await checkAndNotifyOverdueCreditsDebits()
+  } catch {
+    // non-blocking
   }
 
   let creditSales = sales.filter((s) => (s.sale_type || '').startsWith('credit'))
@@ -184,38 +193,52 @@ export default async function AdminCreditReportPage({
                 <th className="px-3 py-2 font-medium text-right">Total</th>
                 <th className="px-3 py-2 font-medium text-right">Credit</th>
                 <th className="px-3 py-2 font-medium text-right">Paid</th>
+                <th className="px-3 py-2 font-medium text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
-              {creditSales.map((s) => (
-                <tr key={s.id} className="hover:bg-slate-900/40">
-                  <td className="px-3 py-2 text-slate-400 text-xs whitespace-nowrap">
-                    {s.created_at ? formatDate(s.created_at) : '—'}
-                  </td>
-                  <td className="px-3 py-2 text-white">
-                    {s.credit_customer_name || '—'}
-                    {s.credit_phone && (
-                      <span className="block text-xs text-slate-500">{s.credit_phone}</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-slate-300">{s.product_name}</td>
-                  <td className="px-3 py-2">
-                    <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-amber-950/60 text-amber-300">
-                      {s.sale_type}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-right">{formatMoney(s.total_amount)}</td>
-                  <td className="px-3 py-2 text-right text-amber-300">
-                    {formatMoney(s.credit_amount ?? s.total_amount)}
-                  </td>
-                  <td className="px-3 py-2 text-right text-emerald-400">
-                    {formatMoney(s.paid_amount || 0)}
-                  </td>
-                </tr>
-              ))}
+              {creditSales.map((s) => {
+                const creditAmt =
+                  s.credit_amount != null ? s.credit_amount : s.total_amount || 0
+                const paid = s.paid_amount || 0
+                const outstanding = Math.max(0, creditAmt - paid)
+                return (
+                  <tr key={s.id} className="hover:bg-slate-900/40">
+                    <td className="px-3 py-2 text-slate-400 text-xs whitespace-nowrap">
+                      {s.created_at ? formatDate(s.created_at) : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-white">
+                      {s.credit_customer_name || '—'}
+                      {s.credit_phone && (
+                        <span className="block text-xs text-slate-500">{s.credit_phone}</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-slate-300">{s.product_name}</td>
+                    <td className="px-3 py-2">
+                      <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-amber-950/60 text-amber-300">
+                        {s.sale_type}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-right">{formatMoney(s.total_amount)}</td>
+                    <td className="px-3 py-2 text-right text-amber-300">
+                      {formatMoney(creditAmt)}
+                    </td>
+                    <td className="px-3 py-2 text-right text-emerald-400">
+                      {formatMoney(paid)}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <PayCreditButton
+                        saleId={s.id}
+                        productName={s.product_name || 'item'}
+                        outstanding={outstanding}
+                      />
+                    </td>
+                  </tr>
+                )
+              })}
               {creditSales.length === 0 && !error && (
                 <tr>
-                  <td colSpan={7} className="px-3 py-10 text-center text-slate-500">
+                  <td colSpan={8} className="px-3 py-10 text-center text-slate-500">
                     No credit sales for this filter.
                   </td>
                 </tr>

@@ -456,21 +456,35 @@ export default function MakeSaleForm({
 
 
   return (
-    <div className="flex flex-col h-full min-h-0 flex-1 md:h-[calc(100vh-5.5rem)] md:min-h-[560px] md:flex-none max-w-[430px] mx-auto md:rounded-[28px] overflow-hidden border-0 md:border md:border-[#d9d9d9] bg-white shadow-none md:shadow-2xl text-[#000]">
-      {/* Telegram-style header */}
-      <div className="flex items-center gap-2 px-3 py-2.5 bg-[#2481cc] text-white shrink-0 safe-top">
+    <div
+      className="flex flex-col h-full min-h-0 flex-1 md:h-[calc(100vh-5.5rem)] md:min-h-[560px] md:flex-none max-w-[440px] mx-auto md:rounded-[32px] overflow-hidden border-0 md:border md:border-white/20 bg-gradient-to-b from-white via-slate-50 to-slate-100 text-[#0f172a] shadow-none md:shadow-[0_25px_50px_-12px_rgba(15,23,42,0.45),0_0_0_1px_rgba(255,255,255,0.4)_inset] [transform-style:preserve-3d] md:[perspective:1200px]"
+      style={{
+        boxShadow:
+          typeof window !== 'undefined'
+            ? undefined
+            : undefined,
+      }}
+    >
+      {/* 3D gradient header */}
+      <div className="relative flex items-center gap-2 px-3 py-3 text-white shrink-0 safe-top overflow-hidden bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-700 shadow-[0_8px_24px_rgba(37,99,235,0.45)]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.35),transparent_55%)]" />
+        <div className="pointer-events-none absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-cyan-400/30 blur-2xl" />
         <button
           type="button"
           onClick={() => router.push('/sales/pos')}
-          className="w-9 h-9 flex items-center justify-center rounded-full active:bg-white/15 touch-manipulation text-xl"
+          className="relative z-10 w-10 h-10 flex items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 active:scale-95 active:bg-white/25 touch-manipulation text-2xl font-light shadow-lg"
           aria-label="Back"
         >
           ‹
         </button>
-        <div className="flex-1 min-w-0">
-          <div className="font-semibold text-[17px] leading-tight truncate">Make Sale</div>
-          <div className="text-[12px] text-white/80 leading-tight">
-            {cartItemCount > 0 ? `${cartItemCount} item${cartItemCount === 1 ? '' : 's'} · ${total.toFixed(2)}` : 'Select products'}
+        <div className="relative z-10 flex-1 min-w-0">
+          <div className="font-bold text-[18px] sm:text-[19px] leading-tight truncate tracking-tight drop-shadow-sm">
+            Make Sale
+          </div>
+          <div className="text-[13px] text-white/90 leading-tight font-medium">
+            {cartItemCount > 0
+              ? `${cartItemCount} item${cartItemCount === 1 ? '' : 's'} · ${total.toFixed(2)}`
+              : 'Tap products to add'}
           </div>
         </div>
         <button
@@ -481,23 +495,23 @@ export default function MakeSaleForm({
             const n = parseFloat(pct)
             if (!isNaN(n) && n >= 0 && n <= 100) setDiscountPct(n)
           }}
-          className="px-2.5 py-1.5 rounded-full bg-white/15 text-[12px] font-medium touch-manipulation"
+          className="relative z-10 px-3 py-2 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/25 text-[13px] font-semibold touch-manipulation active:scale-95 shadow-md"
         >
           % Off
         </button>
         <button
           type="button"
           onClick={() => setChartOpen(true)}
-          className="w-9 h-9 flex items-center justify-center rounded-full active:bg-white/15 touch-manipulation"
+          className="relative z-10 w-10 h-10 flex items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 active:scale-95 touch-manipulation text-lg shadow-md"
         >
           📊
         </button>
       </div>
 
-      {/* Search — Telegram pill */}
-      <div className="px-3 py-2 bg-white border-b border-[#efefef] shrink-0">
-        <div className="flex items-center gap-2 rounded-xl bg-[#f0f2f5] px-3 py-2">
-          <span className="text-[#8e8e93] text-sm">🔍</span>
+      {/* Search — elevated 3D pill */}
+      <div className="px-3 py-2.5 bg-white/80 backdrop-blur-md border-b border-slate-200/80 shrink-0">
+        <div className="flex items-center gap-2.5 rounded-2xl bg-slate-100/90 px-3.5 py-2.5 shadow-[inset_0_2px_4px_rgba(15,23,42,0.06)] border border-slate-200/60">
+          <span className="text-slate-400 text-base">🔍</span>
           <input
             type="search"
             value={productSearch}
@@ -505,8 +519,8 @@ export default function MakeSaleForm({
               setProductSearch(e.target.value)
               if (e.target.value) setActiveCategory(null)
             }}
-            placeholder="Search"
-            className="flex-1 bg-transparent border-0 text-[15px] text-[#000] placeholder:text-[#8e8e93] focus:outline-none"
+            placeholder="Search products…"
+            className="flex-1 bg-transparent border-0 text-[16px] text-slate-900 placeholder:text-slate-400 focus:outline-none font-medium"
             enterKeyHint="search"
             autoComplete="off"
           />
@@ -563,58 +577,66 @@ export default function MakeSaleForm({
         ))}
       </div>
 
-      {/* Products — Telegram chat-list style rows */}
-      <div className="flex-1 overflow-y-auto overscroll-contain bg-white pb-24">
+      {/* Products — elevated 3D cards */}
+      <div className="flex-1 overflow-y-auto overscroll-contain bg-gradient-to-b from-slate-50 to-white pb-28 px-2 pt-1">
         {filteredProducts.length === 0 ? (
-          <p className="text-center text-[#8e8e93] text-[14px] py-16">No products</p>
+          <p className="text-center text-slate-400 text-[15px] py-16 font-medium">
+            No products
+          </p>
         ) : (
-          filteredProducts.map((p) => {
-            const inCartQty =
-              cart.find((c) => c.productId === p.id)?.quantity ?? 0
-            const initial = (p.name || '?').trim().charAt(0).toUpperCase()
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => addToCart(p)}
-                className="w-full flex gap-3 px-3 py-2.5 text-left active:bg-[#f0f2f5] touch-manipulation"
-              >
-                <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center text-[16px] font-semibold shrink-0 ${
+          <div className="grid grid-cols-1 gap-2 py-1">
+            {filteredProducts.map((p) => {
+              const inCartQty =
+                cart.find((c) => c.productId === p.id)?.quantity ?? 0
+              const initial = (p.name || '?').trim().charAt(0).toUpperCase()
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => addToCart(p)}
+                  className={`w-full flex gap-3 px-3 py-3 text-left touch-manipulation rounded-2xl border transition active:scale-[0.98] ${
                     inCartQty > 0
-                      ? 'bg-[#2AABEE] text-white'
-                      : 'bg-[#e7f3fb] text-[#2481cc]'
+                      ? 'bg-sky-50 border-sky-200 shadow-[0_6px_16px_-4px_rgba(14,165,233,0.35)]'
+                      : 'bg-white border-slate-200/80 shadow-[0_4px_14px_-4px_rgba(15,23,42,0.12)] hover:shadow-[0_8px_20px_-4px_rgba(15,23,42,0.18)]'
                   }`}
                 >
-                  {inCartQty > 0 ? inCartQty : initial}
-                </div>
-                <div className="flex-1 min-w-0 border-b border-[#f0f0f0] pb-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="text-[15px] font-medium text-[#000] truncate leading-tight">
-                        {p.name}
+                  <div
+                    className={`w-13 h-13 min-w-[3.25rem] min-h-[3.25rem] rounded-2xl flex items-center justify-center text-[17px] font-bold shrink-0 shadow-md ${
+                      inCartQty > 0
+                        ? 'bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-sky-400/40'
+                        : 'bg-gradient-to-br from-slate-100 to-slate-200 text-sky-700'
+                    }`}
+                  >
+                    {inCartQty > 0 ? inCartQty : initial}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-[16px] font-semibold text-slate-900 truncate leading-tight">
+                          {p.name}
+                        </div>
+                        <div className="text-[13px] text-slate-500 mt-0.5 truncate font-medium">
+                          {p.sku || '—'} · stock {p.stock_qty}
+                        </div>
+                        <div className="text-[12px] text-slate-400 mt-0.5">
+                          Cost {p.cost.toFixed(2)}
+                        </div>
                       </div>
-                      <div className="text-[13px] text-[#8e8e93] mt-0.5 truncate">
-                        {p.sku || '—'} · stk {p.stock_qty}
+                      <div className="text-[16px] font-bold text-slate-900 tabular-nums shrink-0">
+                        {p.price.toFixed(2)}
                       </div>
-                      <div className="text-[12px] text-[#8e8e93] mt-0.5">
-                        Cost {p.cost.toFixed(2)}
-                      </div>
-                    </div>
-                    <div className="text-[15px] font-semibold text-[#000] tabular-nums shrink-0">
-                      {p.price.toFixed(2)}
                     </div>
                   </div>
-                </div>
-              </button>
-            )
-          })
+                </button>
+              )
+            })}
+          </div>
         )}
       </div>
 
-      {/* Telegram-style bottom composer bar */}
-      <div className="fixed md:static bottom-0 inset-x-0 z-40 bg-white border-t border-[#e5e5e5] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-3 shrink-0 max-w-[430px] mx-auto">
-        <div className="flex items-center gap-1.5">
+      {/* 3D bottom action bar */}
+      <div className="fixed md:static bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 px-2.5 py-2.5 pb-[max(0.6rem,env(safe-area-inset-bottom))] md:pb-3 shrink-0 max-w-[440px] mx-auto shadow-[0_-8px_30px_rgba(15,23,42,0.08)]">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             disabled={selectedCartIndex == null}
@@ -624,7 +646,7 @@ export default function MakeSaleForm({
               if (!item) return
               updateQty(selectedCartIndex, item.quantity + 1)
             }}
-            className="w-10 h-10 rounded-full bg-[#f0f2f5] text-[#2481cc] text-xl font-medium disabled:opacity-30 touch-manipulation flex items-center justify-center"
+            className="w-11 h-11 rounded-2xl bg-gradient-to-b from-slate-50 to-slate-200 text-sky-600 text-xl font-bold disabled:opacity-30 touch-manipulation flex items-center justify-center shadow-[0_3px_8px_rgba(15,23,42,0.12)] border border-white active:scale-95"
             aria-label="Increase"
           >
             +
@@ -639,7 +661,7 @@ export default function MakeSaleForm({
               if (item.quantity <= 1) removeFromCart(selectedCartIndex)
               else updateQty(selectedCartIndex, item.quantity - 1)
             }}
-            className="w-10 h-10 rounded-full bg-[#f0f2f5] text-[#2481cc] text-xl font-medium disabled:opacity-30 touch-manipulation flex items-center justify-center"
+            className="w-11 h-11 rounded-2xl bg-gradient-to-b from-slate-50 to-slate-200 text-sky-600 text-xl font-bold disabled:opacity-30 touch-manipulation flex items-center justify-center shadow-[0_3px_8px_rgba(15,23,42,0.12)] border border-white active:scale-95"
             aria-label="Decrease"
           >
             −
@@ -648,7 +670,7 @@ export default function MakeSaleForm({
             type="button"
             disabled={cart.length === 0}
             onClick={clearCart}
-            className="w-10 h-10 rounded-full bg-[#f0f2f5] text-[#8e8e93] disabled:opacity-30 touch-manipulation flex items-center justify-center text-base"
+            className="w-11 h-11 rounded-2xl bg-gradient-to-b from-slate-50 to-slate-200 text-slate-500 disabled:opacity-30 touch-manipulation flex items-center justify-center text-base shadow-[0_3px_8px_rgba(15,23,42,0.12)] border border-white active:scale-95"
             aria-label="Clear"
           >
             🗑
@@ -661,7 +683,7 @@ export default function MakeSaleForm({
               setPayOpen(true)
               setMessage(null)
             }}
-            className="flex-1 h-11 rounded-full bg-[#2AABEE] hover:bg-[#229ed9] disabled:opacity-40 text-white font-semibold text-[15px] touch-manipulation shadow-sm"
+            className="flex-1 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 hover:from-emerald-300 hover:to-teal-500 disabled:opacity-40 text-white font-bold text-[16px] touch-manipulation shadow-[0_8px_20px_-4px_rgba(16,185,129,0.55),inset_0_1px_0_rgba(255,255,255,0.35)] border border-emerald-300/40 active:scale-[0.98]"
           >
             {isPending ? '…' : cart.length === 0 ? 'Pay' : `Pay ${total.toFixed(2)}`}
           </button>
@@ -932,7 +954,7 @@ export default function MakeSaleForm({
                 type="button"
                 disabled={isPending}
                 onClick={completeSale}
-                className="w-full py-3.5 rounded-xl bg-emerald-600 active:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-base touch-manipulation min-h-[52px]"
+                className="w-full py-4 rounded-2xl bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 active:from-emerald-500 active:to-teal-700 disabled:opacity-50 text-white font-bold text-[17px] touch-manipulation min-h-[56px] shadow-[0_10px_28px_-6px_rgba(16,185,129,0.55),inset_0_1px_0_rgba(255,255,255,0.35)] border border-emerald-300/30"
               >
                 {isPending ? 'Processing…' : `Confirm pay ${total.toFixed(2)}`}
               </button>
