@@ -456,7 +456,7 @@ export default function MakeSaleForm({
 
 
   return (
-    <div className="flex flex-col h-full min-h-0 flex-1 md:h-[calc(100vh-5.5rem)] md:min-h-[560px] md:flex-none max-w-[430px] mx-auto md:rounded-[28px] overflow-hidden border-0 md:border md:border-[#d9d9d9] bg-white shadow-none md:shadow-2xl text-[#000]">
+    <div className="flex flex-col h-full min-h-0 flex-1 md:h-[calc(100vh-5.5rem)] md:min-h-[560px] md:flex-none w-full max-w-[430px] mx-auto md:max-w-[1100px] md:rounded-[24px] overflow-hidden border-0 md:border md:border-slate-200 bg-white shadow-none md:shadow-2xl md:shadow-slate-300/40 text-[#000]">
       {/* Telegram-style header */}
       <div className="flex items-center gap-2 px-3 py-2.5 bg-[#2481cc] text-white shrink-0 safe-top">
         <button
@@ -563,57 +563,65 @@ export default function MakeSaleForm({
         ))}
       </div>
 
-      {/* Products — Telegram chat-list style rows */}
-      <div className="flex-1 overflow-y-auto overscroll-contain bg-white pb-24">
+      {/* Products — phone list / desktop grid */}
+      <div className="flex-1 overflow-y-auto overscroll-contain bg-white pb-24 md:pb-4">
         {filteredProducts.length === 0 ? (
           <p className="text-center text-[#8e8e93] text-[14px] py-16">No products</p>
         ) : (
-          filteredProducts.map((p) => {
-            const inCartQty =
-              cart.find((c) => c.productId === p.id)?.quantity ?? 0
-            const initial = (p.name || '?').trim().charAt(0).toUpperCase()
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => addToCart(p)}
-                className="w-full flex gap-3 px-3 py-2.5 text-left active:bg-[#f0f2f5] touch-manipulation"
-              >
-                <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center text-[16px] font-semibold shrink-0 ${
-                    inCartQty > 0
-                      ? 'bg-[#2AABEE] text-white'
-                      : 'bg-[#e7f3fb] text-[#2481cc]'
-                  }`}
+          <div className="md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-2 md:p-3">
+            {filteredProducts.map((p) => {
+              const inCartQty =
+                cart.find((c) => c.productId === p.id)?.quantity ?? 0
+              const initial = (p.name || '?').trim().charAt(0).toUpperCase()
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => addToCart(p)}
+                  className="
+                    w-full flex gap-3 px-3 py-2.5 text-left touch-manipulation
+                    active:bg-[#f0f2f5]
+                    md:rounded-2xl md:border md:border-slate-100 md:bg-slate-50/80
+                    md:hover:border-violet-300 md:hover:bg-violet-50/50 md:hover:shadow-md
+                    md:transition-all md:duration-200
+                  "
                 >
-                  {inCartQty > 0 ? inCartQty : initial}
-                </div>
-                <div className="flex-1 min-w-0 border-b border-[#f0f0f0] pb-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="text-[15px] font-medium text-[#000] truncate leading-tight">
-                        {p.name}
+                  <div
+                    className={`w-12 h-12 rounded-full flex items-center justify-center text-[16px] font-semibold shrink-0 ${
+                      inCartQty > 0
+                        ? 'bg-[#2AABEE] text-white'
+                        : 'bg-[#e7f3fb] text-[#2481cc]'
+                    }`}
+                  >
+                    {inCartQty > 0 ? inCartQty : initial}
+                  </div>
+                  <div className="flex-1 min-w-0 border-b border-[#f0f0f0] pb-2.5 md:border-0 md:pb-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-[15px] font-medium text-[#000] truncate leading-tight">
+                          {p.name}
+                        </div>
+                        <div className="text-[13px] text-[#8e8e93] mt-0.5 truncate">
+                          {p.sku || '—'} · stk {p.stock_qty}
+                        </div>
+                        <div className="text-[12px] text-[#8e8e93] mt-0.5">
+                          Cost {p.cost.toFixed(2)}
+                        </div>
                       </div>
-                      <div className="text-[13px] text-[#8e8e93] mt-0.5 truncate">
-                        {p.sku || '—'} · stk {p.stock_qty}
+                      <div className="text-[15px] font-semibold text-[#000] tabular-nums shrink-0">
+                        {p.price.toFixed(2)}
                       </div>
-                      <div className="text-[12px] text-[#8e8e93] mt-0.5">
-                        Cost {p.cost.toFixed(2)}
-                      </div>
-                    </div>
-                    <div className="text-[15px] font-semibold text-[#000] tabular-nums shrink-0">
-                      {p.price.toFixed(2)}
                     </div>
                   </div>
-                </div>
-              </button>
-            )
-          })
+                </button>
+              )
+            })}
+          </div>
         )}
       </div>
 
       {/* Telegram-style bottom composer bar */}
-      <div className="fixed md:static bottom-0 inset-x-0 z-40 bg-white border-t border-[#e5e5e5] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-3 shrink-0 max-w-[430px] mx-auto">
+      <div className="fixed md:static bottom-0 inset-x-0 z-40 bg-white border-t border-[#e5e5e5] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-3 shrink-0 max-w-[430px] md:max-w-[1100px] mx-auto">
         <div className="flex items-center gap-1.5">
           <button
             type="button"
