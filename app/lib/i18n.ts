@@ -1,0 +1,78 @@
+export type Lang = 'en' | 'am'
+
+export const translations = {
+  en: {
+    appName: 'Union Inventory',
+    tagline: 'Shop Management System',
+    salesLogin: 'Sales Terminal Login',
+    adminLogin: 'Admin Dashboard',
+    language: 'Language',
+    // Add product
+    backInventory: '← Inventory',
+    addProductTitle: 'Add new product',
+    addProductSubtitle: 'Create a product with SKU, pricing, stock and photo',
+    sku: 'SKU *',
+    skuPlaceholder: 'e.g. PROD-001',
+    category: 'Category',
+    categoryPlaceholder: 'e.g. Beverages',
+    productName: 'Product name * (Amharic)',
+    productNamePlaceholder: 'Write product name in Amharic',
+    productNameHint: 'Product name must be written in Amharic (አማርኛ)',
+    description: 'Description',
+    descriptionPlaceholder: 'Optional description (Amharic preferred)',
+    productImage: 'Product picture',
+    productImageHint: 'Upload a clear photo of the product (JPG, PNG, WebP, max 5MB)',
+    sellPrice: 'Sell price *',
+    cost: 'Cost',
+    stockQty: 'Stock quantity *',
+    lowStock: 'Low stock threshold',
+    purchaseType: 'Purchase type',
+    cash: 'Cash',
+    credit: 'Credit',
+    supplierName: 'Supplier name',
+    supplierPhone: 'Supplier phone',
+    submit: 'Add product',
+    submitting: 'Saving…',
+  },
+  am: {
+    appName: 'ዩኒየን ኢንቬንቶሪ',
+    tagline: 'የሱቅ አስተዳደር ስርዓት',
+    salesLogin: 'የሽያጭ ተርሚናል መግቢያ',
+    adminLogin: 'አድሚን ዳሽቦርድ',
+    language: 'ቋንቋ',
+    // Add product
+    backInventory: '← ኢንቬንቶሪ',
+    addProductTitle: 'አዲስ ምርት ጨምር',
+    addProductSubtitle: 'SKU፣ ዋጋ፣ ክምችት እና ፎቶ ያለው ምርት ይፍጠሩ',
+    sku: 'SKU *',
+    skuPlaceholder: 'ለምሳሌ PROD-001',
+    category: 'ምድብ',
+    categoryPlaceholder: 'ለምሳሌ መጠጦች',
+    productName: 'የምርት ስም * (በአማርኛ)',
+    productNamePlaceholder: 'የምርቱን ስም በአማርኛ ይጻፉ',
+    productNameHint: 'የምርት ስም በአማርኛ መጻፍ አለበት',
+    description: 'መግለጫ',
+    descriptionPlaceholder: 'አማራጭ መግለጫ (በአማርኛ ይመረጣል)',
+    productImage: 'የምርት ፎቶ',
+    productImageHint: 'ግልጽ የሆነ የምርት ፎቶ ይጫኑ (JPG, PNG, WebP፣ ከፍተኛ 5ሜባ)',
+    sellPrice: 'የሽያጭ ዋጋ *',
+    cost: 'ወጪ',
+    stockQty: 'የክምችት ብዛት *',
+    lowStock: 'ዝቅተኛ ክምችት ገደብ',
+    purchaseType: 'የግዢ አይነት',
+    cash: 'ጥሬ ገንዘብ',
+    credit: 'ብድር',
+    supplierName: 'የአቅራቢ ስም',
+    supplierPhone: 'የአቅራቢ ስልክ',
+    submit: 'ምርት ጨምር',
+    submitting: 'እየተቀመጠ ነው…',
+  },
+} as const
+
+export type TranslationKey = keyof typeof translations.en
+
+export function t(lang: Lang, key: TranslationKey): string {
+  return translations[lang][key] ?? translations.en[key]
+}
+
+export const LANG_STORAGE_KEY = 'union_inventory_lang'

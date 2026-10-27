@@ -102,7 +102,25 @@ export default function ProductsTable({
                     <td className="px-6 py-3 font-mono text-emerald-400 text-xs">
                       {p.sku}
                     </td>
-                    <td className="px-6 py-3 text-white font-medium">{p.name}</td>
+                    <td className="px-6 py-3 text-white font-medium">
+                      <div className="flex items-center gap-3">
+                        {p.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={p.image_url}
+                            alt=""
+                            className="w-9 h-9 rounded-lg object-cover border border-slate-700 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 shrink-0 flex items-center justify-center text-slate-600 text-xs">
+                            —
+                          </div>
+                        )}
+                        <span className="truncate max-w-[180px]" title={p.name}>
+                          {p.name}
+                        </span>
+                      </div>
+                    </td>
                     <td className="px-6 py-3 text-slate-400">
                       {p.category || '—'}
                     </td>

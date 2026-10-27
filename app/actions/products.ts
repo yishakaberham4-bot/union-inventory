@@ -25,6 +25,8 @@ export interface Product {
   /** Outstanding amount owed for credit purchase (cost * qty at add time) */
   purchase_credit_amount?: number | null
   purchase_paid_amount?: number | null
+  /** Public URL of product photo */
+  image_url?: string | null
 }
 
 function getAdminClient() {
@@ -134,6 +136,50 @@ function mapProduct(row: any): Product {
       row.purchase_paid_amount != null
         ? Number(row.purchase_paid_amount)
         : null,
+    image_url: row.image_url ?? null,
+  }
+}
+
+
+const PRODUCT_IMAGES_BUCKET = 'product-images'
+
+async function ensureProductImagesBucket(admin: ReturnType<typeof getAdminClient>) {
+  const { data: buckets } = await admin.storage.listBuckets()
+  const exists = (buckets || []).some((b) => b.name === PRODUCT_IMAGES_BUCKET)
+  if (!exists) {
+    await admin.storage.createBucket(PRODUCT_IMAGES_BUCKET, {
+      public: true,
+      fileSizeLimit: 5 * 1024 * 1024,
+      allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp', 'image/gif'],
+    })
+  }
+}
+
+async function uploadProductImage(
+  admin: ReturnType<typeof getAdminClient>,
+  file: File,
+  sku: string
+): Promise<string | null> {
+  try {
+    await ensureProductImagesBucket(admin)
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '')
+    const path = `${sku.toLowerCase()}-${Date.now()}.${ext || 'jpg'}`
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const { error } = await admin.storage
+      .from(PRODUCT_IMAGES_BUCKET)
+      .upload(path, buffer, {
+        contentType: file.type || 'image/jpeg',
+        upsert: true,
+      })
+    if (error) {
+      console.error('Product image upload failed:', error.message)
+      return null
+    }
+    const { data } = admin.storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(path)
+    return data?.publicUrl || null
+  } catch (e) {
+    console.error('Product image upload error:', e)
+    return null
   }
 }
 
@@ -155,6 +201,7 @@ export async function createProduct(formData: FormData) {
   const purchaseType = purchaseTypeRaw === 'credit' ? 'credit' : 'cash'
   const supplierName = String(formData.get('supplier_name') || '').trim() || null
   const supplierPhone = String(formData.get('supplier_phone') || '').trim() || null
+  const imageFile = formData.get('image')
 
   if (!sku || !name) {
     return { error: 'SKU and product name are required' }
@@ -177,6 +224,15 @@ export async function createProduct(formData: FormData) {
   const purchasePaidAmount = 0
 
   const admin = getAdminClient()
+
+  let imageUrl: string | null = null
+  if (imageFile && imageFile instanceof File && imageFile.size > 0) {
+    if (imageFile.size > 5 * 1024 * 1024) {
+      return { error: 'Product image must be under 5MB' }
+    }
+    imageUrl = await uploadProductImage(admin, imageFile, sku)
+  }
+
   const basePayload: Record<string, unknown> = {
     sku,
     name,
@@ -187,6 +243,9 @@ export async function createProduct(formData: FormData) {
     stock_qty,
     low_stock_threshold: isNaN(low_stock_threshold) ? 5 : low_stock_threshold,
     is_active: true,
+  }
+  if (imageUrl) {
+    basePayload.image_url = imageUrl
   }
   const fullPayload = {
     ...basePayload,
