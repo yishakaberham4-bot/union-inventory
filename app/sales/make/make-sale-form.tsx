@@ -81,6 +81,8 @@ export default function MakeSaleForm({
   const [barcodeInput, setBarcodeInput] = useState('')
   const [scanFlash, setScanFlash] = useState<string | null>(null)
   const barcodeRef = useRef<HTMLInputElement>(null)
+  /** Local string while editing cart price so mobile keyboard stays open */
+  const [priceDraft, setPriceDraft] = useState<{ index: number; value: string } | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
   const [selectedCartIndex, setSelectedCartIndex] = useState<number | null>(null)
 
@@ -421,12 +423,8 @@ export default function MakeSaleForm({
   function CartLines({ compact }: { compact?: boolean }) {
     if (cart.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center py-16 px-6 text-center min-h-[140px]">
-          <div className="w-14 h-14 rounded-full bg-[#e7f3fb] flex items-center justify-center text-2xl mb-3">
-            🛒
-          </div>
-          <p className="text-[#8e8e93] text-[15px] font-medium">Order is empty</p>
-          <p className="text-[#b0b0b5] text-[13px] mt-1">Tap a product to add it</p>
+        <div className="flex flex-col items-center justify-center py-4 px-6 text-center">
+          <p className="text-[#8e8e93] text-[13px]">Cart empty — tap a product below</p>
         </div>
       )
     }
@@ -478,16 +476,40 @@ export default function MakeSaleForm({
                 <div className="mt-1.5 flex items-center gap-2">
                   <span className="text-[12px] text-[#8e8e93]">Price</span>
                   <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={item.unitPrice}
+                    type="text"
+                    inputMode="decimal"
+                    value={
+                      priceDraft?.index === index
+                        ? priceDraft.value
+                        : String(item.unitPrice)
+                    }
                     onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => {
-                      const v = parseFloat(e.target.value)
-                      updateUnitPrice(index, isNaN(v) ? 0 : v)
+                    onFocus={(e) => {
+                      e.stopPropagation()
+                      setSelectedCartIndex(index)
+                      setPriceDraft({
+                        index,
+                        value: String(item.unitPrice),
+                      })
                     }}
-                    className="w-[5rem] rounded-lg bg-[#f0f2f5] border-0 px-2 py-1 text-[14px] text-[#000] font-medium focus:outline-none focus:ring-2 focus:ring-[#2AABEE]/40"
+                    onChange={(e) => {
+                      // Keep raw string while typing — do not push to cart yet
+                      const raw = e.target.value.replace(/[^0-9.]/g, '')
+                      setPriceDraft({ index, value: raw })
+                    }}
+                    onBlur={() => {
+                      if (priceDraft?.index === index) {
+                        const v = parseFloat(priceDraft.value)
+                        updateUnitPrice(index, isNaN(v) || v < 0 ? 0 : v)
+                        setPriceDraft(null)
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        ;(e.target as HTMLInputElement).blur()
+                      }
+                    }}
+                    className="w-[5.5rem] rounded-lg bg-[#f0f2f5] border-0 px-2 py-1 text-[14px] text-[#000] font-medium focus:outline-none focus:ring-2 focus:ring-[#2AABEE]/40"
                   />
                 </div>
               </div>
@@ -500,7 +522,7 @@ export default function MakeSaleForm({
 
 
   return (
-    <div className="flex flex-col h-full min-h-0 flex-1 md:h-[calc(100vh-5.5rem)] md:min-h-[560px] md:flex-none w-full max-w-[430px] mx-auto md:max-w-[1100px] md:rounded-[24px] overflow-hidden border-0 md:border md:border-slate-200 bg-white shadow-none md:shadow-2xl md:shadow-slate-300/40 text-[#000]">
+    <div className="flex flex-col h-[100dvh] max-h-[100dvh] min-h-0 flex-1 md:h-[calc(100vh-5.5rem)] md:max-h-[calc(100vh-5.5rem)] md:min-h-[560px] md:flex-none w-full max-w-[430px] mx-auto md:max-w-[1100px] md:rounded-[24px] overflow-hidden border-0 md:border md:border-slate-200 bg-white shadow-none md:shadow-2xl md:shadow-slate-300/40 text-[#000]">
       {/* Telegram-style header */}
       <div className="flex items-center gap-2 px-3 py-2.5 bg-[#2481cc] text-white shrink-0 safe-top">
         <button
@@ -599,7 +621,7 @@ export default function MakeSaleForm({
       </div>
 
       {/* Order / cart — Telegram list */}
-      <div className="shrink-0 max-h-[34vh] overflow-y-auto overscroll-contain bg-white border-b border-[#efefef]">
+      <div className="shrink-0 max-h-[22vh] overflow-y-auto overscroll-contain bg-white border-b border-[#efefef]" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
         <CartLines />
         {cart.length > 0 && (
           <div className="px-4 py-2 flex items-center justify-between bg-[#f7f7f8]">
@@ -649,7 +671,10 @@ export default function MakeSaleForm({
       </div>
 
       {/* Products — phone list / desktop grid */}
-      <div className="flex-1 overflow-y-auto overscroll-contain bg-white pb-24 md:pb-4">
+      <div
+        className="flex-1 min-h-0 overflow-y-scroll overscroll-y-contain bg-white pb-24 md:pb-4"
+        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+      >
         {filteredProducts.length === 0 ? (
           <p className="text-center text-[#8e8e93] text-[14px] py-16">No products</p>
         ) : (

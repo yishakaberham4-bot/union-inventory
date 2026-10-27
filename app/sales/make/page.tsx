@@ -29,7 +29,7 @@ export default async function MakeSalePage() {
   }
 
   return (
-    <div className="w-full flex flex-col flex-1 min-h-0 relative">
+    <div className="w-full flex flex-col flex-1 min-h-0 overflow-hidden relative">
       {/* Desktop ambient glow */}
       <div
         className="pointer-events-none fixed inset-0 -z-10 hidden md:block"

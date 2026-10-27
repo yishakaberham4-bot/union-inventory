@@ -83,7 +83,7 @@ export default async function SalesLayout({
           </form>
         </div>
       </header>
-      <div className="flex-1 flex flex-col min-h-0 pb-0 md:pb-2">{children}</div>
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-0 md:pb-2">{children}</div>
     </div>
   )
 }

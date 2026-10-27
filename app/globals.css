@@ -41,3 +41,11 @@ button:focus-visible {
 .touch-manipulation {
   touch-action: manipulation;
 }
+
+
+/* Smooth one-finger scrolling inside POS panels */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+}
