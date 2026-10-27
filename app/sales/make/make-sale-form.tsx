@@ -68,6 +68,74 @@ const BOTTOM_ICONS: Record<string, string> = {
   All: '📦',
 }
 
+
+/** Local price field — keeps keyboard open and saves on blur / Enter */
+function CartPriceInput({
+  value,
+  onCommit,
+}: {
+  value: number
+  onCommit: (n: number) => void
+}) {
+  const [text, setText] = useState(
+    Number.isFinite(value) ? String(value) : '0'
+  )
+  const focused = useRef(false)
+
+  // Sync from parent only when not editing
+  useEffect(() => {
+    if (!focused.current) {
+      setText(Number.isFinite(value) ? String(value) : '0')
+    }
+  }, [value])
+
+  function commit(raw: string) {
+    const cleaned = raw.replace(/,/g, '.').trim()
+    const n = parseFloat(cleaned)
+    const next = !isNaN(n) && n >= 0 ? n : 0
+    onCommit(next)
+    setText(String(next))
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      enterKeyHint="done"
+      value={text}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onFocus={(e) => {
+        e.stopPropagation()
+        focused.current = true
+        // Select all so user can type a new price immediately
+        requestAnimationFrame(() => e.target.select())
+      }}
+      onChange={(e) => {
+        // Allow digits and one decimal point while typing
+        let raw = e.target.value.replace(/[^0-9.]/g, '')
+        const parts = raw.split('.')
+        if (parts.length > 2) {
+          raw = parts[0] + '.' + parts.slice(1).join('')
+        }
+        setText(raw)
+      }}
+      onBlur={(e) => {
+        focused.current = false
+        commit(e.target.value)
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          ;(e.target as HTMLInputElement).blur()
+        }
+      }}
+      className="w-[6rem] rounded-lg bg-[#f0f2f5] border border-transparent px-2 py-1.5 text-[15px] text-[#000] font-semibold tabular-nums focus:outline-none focus:ring-2 focus:ring-[#2AABEE] focus:border-[#2AABEE] focus:bg-white"
+      aria-label="Unit price"
+    />
+  )
+}
+
 export default function MakeSaleForm({
   products,
   chart,
@@ -81,8 +149,6 @@ export default function MakeSaleForm({
   const [barcodeInput, setBarcodeInput] = useState('')
   const [scanFlash, setScanFlash] = useState<string | null>(null)
   const barcodeRef = useRef<HTMLInputElement>(null)
-  /** Local string while editing cart price so mobile keyboard stays open */
-  const [priceDraft, setPriceDraft] = useState<{ index: number; value: string } | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
   const [selectedCartIndex, setSelectedCartIndex] = useState<number | null>(null)
 
@@ -473,43 +539,18 @@ export default function MakeSaleForm({
                     <div className="text-[12px] text-[#8e8e93]">×{item.quantity}</div>
                   </div>
                 </div>
-                <div className="mt-1.5 flex items-center gap-2">
+                <div
+                  className="mt-1.5 flex items-center gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
                   <span className="text-[12px] text-[#8e8e93]">Price</span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={
-                      priceDraft?.index === index
-                        ? priceDraft.value
-                        : String(item.unitPrice)
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                    onFocus={(e) => {
-                      e.stopPropagation()
+                  <CartPriceInput
+                    value={item.unitPrice}
+                    onCommit={(n) => {
                       setSelectedCartIndex(index)
-                      setPriceDraft({
-                        index,
-                        value: String(item.unitPrice),
-                      })
+                      updateUnitPrice(index, n)
                     }}
-                    onChange={(e) => {
-                      // Keep raw string while typing — do not push to cart yet
-                      const raw = e.target.value.replace(/[^0-9.]/g, '')
-                      setPriceDraft({ index, value: raw })
-                    }}
-                    onBlur={() => {
-                      if (priceDraft?.index === index) {
-                        const v = parseFloat(priceDraft.value)
-                        updateUnitPrice(index, isNaN(v) || v < 0 ? 0 : v)
-                        setPriceDraft(null)
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        ;(e.target as HTMLInputElement).blur()
-                      }
-                    }}
-                    className="w-[5.5rem] rounded-lg bg-[#f0f2f5] border-0 px-2 py-1 text-[14px] text-[#000] font-medium focus:outline-none focus:ring-2 focus:ring-[#2AABEE]/40"
                   />
                 </div>
               </div>
@@ -621,7 +662,7 @@ export default function MakeSaleForm({
       </div>
 
       {/* Order / cart — Telegram list */}
-      <div className="shrink-0 max-h-[18vh] overflow-y-auto overscroll-contain bg-white border-b border-[#efefef]" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+      <div className="shrink-0 max-h-[28vh] overflow-y-auto overscroll-contain bg-white border-b border-[#efefef]" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
         <CartLines />
         {cart.length > 0 && (
           <div className="px-4 py-2 flex items-center justify-between bg-[#f7f7f8]">
