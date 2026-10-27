@@ -66,12 +66,31 @@ function friendlyError(message: string): string {
 
 export async function getAvailableProductsForSale() {
   const admin = getAdminClient()
-  // Do not filter is_active = true only — null should still show
-  const { data, error } = await admin
-    .from('products')
-    .select('id, sku, name, price, cost, stock_qty, is_active, category')
-    .gt('stock_qty', 0)
-    .order('name', { ascending: true })
+  // Prefer including barcode; fall back if column not yet migrated
+  let data: any[] | null = null
+  let error: { message: string } | null = null
+
+  {
+    const res = await admin
+      .from('products')
+      .select('id, sku, name, price, cost, stock_qty, is_active, category, barcode')
+      .gt('stock_qty', 0)
+      .order('name', { ascending: true })
+    data = res.data
+    error = res.error
+    if (error) {
+      const msg = (error.message || '').toLowerCase()
+      if (msg.includes('column') || msg.includes('barcode')) {
+        const res2 = await admin
+          .from('products')
+          .select('id, sku, name, price, cost, stock_qty, is_active, category')
+          .gt('stock_qty', 0)
+          .order('name', { ascending: true })
+        data = res2.data
+        error = res2.error
+      }
+    }
+  }
 
   if (error) throw new Error(friendlyError(error.message))
 
@@ -85,6 +104,7 @@ export async function getAvailableProductsForSale() {
       cost: row.cost != null ? Number(row.cost) : 0,
       stock_qty: Number(row.stock_qty) || 0,
       category: (row.category as string) || null,
+      barcode: (row.barcode as string) || null,
     }))
 }
 

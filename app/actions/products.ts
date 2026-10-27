@@ -27,6 +27,8 @@ export interface Product {
   purchase_paid_amount?: number | null
   /** Public URL of product photo */
   image_url?: string | null
+  /** Barcode from product packaging (EAN/UPC/etc.) */
+  barcode?: string | null
 }
 
 function getAdminClient() {
@@ -137,6 +139,7 @@ function mapProduct(row: any): Product {
         ? Number(row.purchase_paid_amount)
         : null,
     image_url: row.image_url ?? null,
+    barcode: row.barcode ?? null,
   }
 }
 
@@ -188,6 +191,7 @@ export async function createProduct(formData: FormData) {
   const name = String(formData.get('name') || '').trim()
   const description = String(formData.get('description') || '').trim() || null
   const category = String(formData.get('category') || '').trim() || null
+  const barcode = String(formData.get('barcode') || '').trim() || null
   const price = parseFloat(String(formData.get('price') || '0'))
   const cost = parseFloat(String(formData.get('cost') || '0'))
   const stock_qty = parseInt(String(formData.get('stock_qty') || '0'), 10)
@@ -243,6 +247,9 @@ export async function createProduct(formData: FormData) {
     stock_qty,
     low_stock_threshold: isNaN(low_stock_threshold) ? 5 : low_stock_threshold,
     is_active: true,
+  }
+  if (barcode) {
+    basePayload.barcode = barcode
   }
   if (imageUrl) {
     basePayload.image_url = imageUrl

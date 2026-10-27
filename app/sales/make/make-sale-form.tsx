@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createSale } from '@/app/actions/sales'
 import { useRouter } from 'next/navigation'
 
@@ -12,6 +12,7 @@ type ProductOption = {
   cost: number
   stock_qty: number
   category?: string | null
+  barcode?: string | null
 }
 
 export type SalesChartData = {
@@ -77,6 +78,9 @@ export default function MakeSaleForm({
   const router = useRouter()
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [productSearch, setProductSearch] = useState('')
+  const [barcodeInput, setBarcodeInput] = useState('')
+  const [scanFlash, setScanFlash] = useState<string | null>(null)
+  const barcodeRef = useRef<HTMLInputElement>(null)
   const [cart, setCart] = useState<CartItem[]>([])
   const [selectedCartIndex, setSelectedCartIndex] = useState<number | null>(null)
 
@@ -122,7 +126,8 @@ export default function MakeSaleForm({
       list = list.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
-          p.sku.toLowerCase().includes(q)
+          p.sku.toLowerCase().includes(q) ||
+          (p.barcode || '').toLowerCase().includes(q)
       )
     }
     return list
@@ -169,6 +174,45 @@ export default function MakeSaleForm({
       ]
     })
     setMessage(null)
+  }
+
+  function findByBarcodeOrSku(code: string): ProductOption | undefined {
+    const c = code.trim()
+    if (!c) return undefined
+    const lower = c.toLowerCase()
+    // Exact barcode match first, then exact SKU
+    return (
+      products.find((p) => (p.barcode || '').trim() === c) ||
+      products.find((p) => (p.sku || '').toLowerCase() === lower) ||
+      products.find((p) => (p.barcode || '').toLowerCase() === lower)
+    )
+  }
+
+  function handleBarcodeScan(raw: string) {
+    const code = raw.trim()
+    if (!code) return
+    const p = findByBarcodeOrSku(code)
+    if (!p) {
+      setMessage({
+        type: 'err',
+        text: `No product found for barcode/SKU: ${code}`,
+      })
+      setScanFlash(null)
+      setBarcodeInput('')
+      return
+    }
+    if (p.stock_qty <= 0) {
+      setMessage({ type: 'err', text: `${p.name} is out of stock` })
+      setBarcodeInput('')
+      return
+    }
+    addToCart(p)
+    setScanFlash(`${p.name} added`)
+    setBarcodeInput('')
+    setMessage(null)
+    // Keep focus for continuous scanning
+    requestAnimationFrame(() => barcodeRef.current?.focus())
+    window.setTimeout(() => setScanFlash(null), 1200)
   }
 
   function updateQty(index: number, qty: number) {
@@ -494,8 +538,49 @@ export default function MakeSaleForm({
         </button>
       </div>
 
-      {/* Search — Telegram pill */}
-      <div className="px-3 py-2 bg-white border-b border-[#efefef] shrink-0">
+      {/* Barcode scanner — focus here; scanner types code + Enter */}
+      <div className="px-3 pt-2 pb-1 bg-white border-b border-[#efefef] shrink-0 space-y-2">
+        <div
+          className={`flex items-center gap-2 rounded-xl px-3 py-2.5 border-2 transition ${
+            scanFlash
+              ? 'bg-emerald-50 border-emerald-400'
+              : 'bg-[#f0f2f5] border-transparent focus-within:border-violet-400'
+          }`}
+        >
+          <span className="text-lg shrink-0" aria-hidden>
+            📷
+          </span>
+          <input
+            ref={barcodeRef}
+            type="text"
+            inputMode="none"
+            value={barcodeInput}
+            onChange={(e) => setBarcodeInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleBarcodeScan(barcodeInput)
+              }
+            }}
+            placeholder="Scan barcode…"
+            className="flex-1 bg-transparent border-0 text-[15px] text-[#000] placeholder:text-[#8e8e93] focus:outline-none font-mono tracking-wide"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+          {barcodeInput.trim() && (
+            <button
+              type="button"
+              onClick={() => handleBarcodeScan(barcodeInput)}
+              className="text-xs font-semibold text-violet-600 px-2 py-1 rounded-lg bg-violet-100 shrink-0"
+            >
+              Add
+            </button>
+          )}
+        </div>
+        {scanFlash && (
+          <p className="text-[12px] text-emerald-600 font-medium px-1">✓ {scanFlash}</p>
+        )}
         <div className="flex items-center gap-2 rounded-xl bg-[#f0f2f5] px-3 py-2">
           <span className="text-[#8e8e93] text-sm">🔍</span>
           <input
@@ -505,7 +590,7 @@ export default function MakeSaleForm({
               setProductSearch(e.target.value)
               if (e.target.value) setActiveCategory(null)
             }}
-            placeholder="Search"
+            placeholder="Search name / SKU"
             className="flex-1 bg-transparent border-0 text-[15px] text-[#000] placeholder:text-[#8e8e93] focus:outline-none"
             enterKeyHint="search"
             autoComplete="off"

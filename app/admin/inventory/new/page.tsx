@@ -85,13 +85,25 @@ export default function NewProductPage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-slate-300 mb-1">{t(lang, 'category')}</label>
+              <label className="block text-sm text-slate-300 mb-1">{t(lang, 'barcode')}</label>
               <input
-                name="category"
-                placeholder={t(lang, 'categoryPlaceholder')}
-                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                name="barcode"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder={t(lang, 'barcodePlaceholder')}
+                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
               />
+              <p className="text-xs text-slate-500 mt-1">{t(lang, 'barcodeHint')}</p>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm text-slate-300 mb-1">{t(lang, 'category')}</label>
+            <input
+              name="category"
+              placeholder={t(lang, 'categoryPlaceholder')}
+              className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-emerald-500"
+            />
           </div>
 
           <div>
