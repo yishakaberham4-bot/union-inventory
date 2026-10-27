@@ -49,3 +49,9 @@ button:focus-visible {
   touch-action: pan-y;
   overscroll-behavior-y: contain;
 }
+
+
+/* iPhone notch / status bar */
+.safe-top {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}

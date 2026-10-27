@@ -35,6 +35,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -45,7 +46,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.className} antialiased bg-slate-950 text-slate-100 min-h-screen flex flex-col`}
+        className={`${geistSans.className} antialiased bg-slate-950 text-slate-100 min-h-[100dvh] flex flex-col`}
       >
         <PwaRegister />
         <div className="flex-1 flex flex-col min-h-0">{children}</div>

@@ -522,7 +522,7 @@ export default function MakeSaleForm({
 
 
   return (
-    <div className="flex flex-col h-[100dvh] max-h-[100dvh] min-h-0 flex-1 md:h-[calc(100vh-5.5rem)] md:max-h-[calc(100vh-5.5rem)] md:min-h-[560px] md:flex-none w-full max-w-[430px] mx-auto md:max-w-[1100px] md:rounded-[24px] overflow-hidden border-0 md:border md:border-slate-200 bg-white shadow-none md:shadow-2xl md:shadow-slate-300/40 text-[#000]">
+    <div className="flex flex-col h-full min-h-0 flex-1 w-full max-w-none mx-auto md:max-w-[1100px] md:rounded-[24px] overflow-hidden border-0 md:border md:border-slate-200 bg-white shadow-none md:shadow-2xl md:shadow-slate-300/40 text-[#000]">
       {/* Telegram-style header */}
       <div className="flex items-center gap-2 px-3 py-2.5 bg-[#2481cc] text-white shrink-0 safe-top">
         <button
@@ -621,7 +621,7 @@ export default function MakeSaleForm({
       </div>
 
       {/* Order / cart — Telegram list */}
-      <div className="shrink-0 max-h-[22vh] overflow-y-auto overscroll-contain bg-white border-b border-[#efefef]" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+      <div className="shrink-0 max-h-[18vh] overflow-y-auto overscroll-contain bg-white border-b border-[#efefef]" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
         <CartLines />
         {cart.length > 0 && (
           <div className="px-4 py-2 flex items-center justify-between bg-[#f7f7f8]">
@@ -672,7 +672,7 @@ export default function MakeSaleForm({
 
       {/* Products — phone list / desktop grid */}
       <div
-        className="flex-1 min-h-0 overflow-y-scroll overscroll-y-contain bg-white pb-24 md:pb-4"
+        className="flex-1 min-h-0 overflow-y-scroll overscroll-y-contain bg-white pb-2 md:pb-4"
         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
       >
         {filteredProducts.length === 0 ? (
@@ -731,7 +731,7 @@ export default function MakeSaleForm({
       </div>
 
       {/* Telegram-style bottom composer bar */}
-      <div className="fixed md:static bottom-0 inset-x-0 z-40 bg-white border-t border-[#e5e5e5] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-3 shrink-0 max-w-[430px] md:max-w-[1100px] mx-auto">
+      <div className="shrink-0 z-40 bg-white border-t border-[#e5e5e5] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-3 w-full">
         <div className="flex items-center gap-1.5">
           <button
             type="button"
