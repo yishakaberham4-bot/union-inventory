@@ -9,6 +9,8 @@ export interface Product {
   id: string
   sku: string
   name: string
+  /** Amharic product name */
+  name_am?: string | null
   description?: string | null
   category?: string | null
   price: number
@@ -118,6 +120,7 @@ function mapProduct(row: any): Product {
     id: row.id,
     sku: row.sku || '',
     name: row.name || '',
+    name_am: row.name_am ?? null,
     description: row.description,
     category: row.category,
     price: Number(row.price) || 0,
@@ -189,6 +192,7 @@ async function uploadProductImage(
 export async function createProduct(formData: FormData) {
   const sku = String(formData.get('sku') || '').trim().toUpperCase()
   const name = String(formData.get('name') || '').trim()
+  const nameAm = String(formData.get('name_am') || '').trim() || null
   const description = String(formData.get('description') || '').trim() || null
   const category = String(formData.get('category') || '').trim() || null
   const barcode = String(formData.get('barcode') || '').trim() || null
@@ -208,7 +212,10 @@ export async function createProduct(formData: FormData) {
   const imageFile = formData.get('image')
 
   if (!sku || !name) {
-    return { error: 'SKU and product name are required' }
+    return { error: 'SKU and English product name are required' }
+  }
+  if (!nameAm) {
+    return { error: 'Amharic product name is required (የምርት ስም በአማርኛ)' }
   }
   if (isNaN(price) || price <= 0) {
     return { error: 'Sell price must be greater than 0' }
@@ -247,6 +254,9 @@ export async function createProduct(formData: FormData) {
     stock_qty,
     low_stock_threshold: isNaN(low_stock_threshold) ? 5 : low_stock_threshold,
     is_active: true,
+  }
+  if (nameAm) {
+    basePayload.name_am = nameAm
   }
   if (barcode) {
     basePayload.barcode = barcode
@@ -316,6 +326,7 @@ export async function updateProduct(formData: FormData) {
   const id = String(formData.get('id') || '')
   const sku = String(formData.get('sku') || '').trim().toUpperCase()
   const name = String(formData.get('name') || '').trim()
+  const nameAm = String(formData.get('name_am') || '').trim() || null
   const description = String(formData.get('description') || '').trim() || null
   const category = String(formData.get('category') || '').trim() || null
   const price = parseFloat(String(formData.get('price') || '0'))
@@ -328,24 +339,31 @@ export async function updateProduct(formData: FormData) {
   const is_active = formData.get('is_active') === 'on' || formData.get('is_active') === 'true'
 
   if (!id) return { error: 'Product ID is required' }
-  if (!sku || !name) return { error: 'SKU and product name are required' }
+  if (!sku || !name) return { error: 'SKU and English product name are required' }
 
   const admin = getAdminClient()
-  const { error } = await admin
-    .from('products')
-    .update({
-      sku,
-      name,
-      description,
-      category,
-      price,
-      cost: isNaN(cost) ? 0 : cost,
-      stock_qty: isNaN(stock_qty) ? 0 : stock_qty,
-      low_stock_threshold: isNaN(low_stock_threshold) ? 5 : low_stock_threshold,
-      is_active,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', id)
+  const updatePayload: Record<string, unknown> = {
+    sku,
+    name,
+    description,
+    category,
+    price,
+    cost: isNaN(cost) ? 0 : cost,
+    stock_qty: isNaN(stock_qty) ? 0 : stock_qty,
+    low_stock_threshold: isNaN(low_stock_threshold) ? 5 : low_stock_threshold,
+    is_active,
+    updated_at: new Date().toISOString(),
+  }
+  if (nameAm) updatePayload.name_am = nameAm
+
+  let { error } = await admin.from('products').update(updatePayload).eq('id', id)
+  if (error) {
+    const msg = (error.message || '').toLowerCase()
+    if ((msg.includes('column') || msg.includes('name_am')) && 'name_am' in updatePayload) {
+      delete updatePayload.name_am
+      ;({ error } = await admin.from('products').update(updatePayload).eq('id', id))
+    }
+  }
 
   if (error) return { error: friendlyError(error.message) }
 

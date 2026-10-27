@@ -66,30 +66,26 @@ function friendlyError(message: string): string {
 
 export async function getAvailableProductsForSale() {
   const admin = getAdminClient()
-  // Prefer including barcode; fall back if column not yet migrated
+  // Prefer barcode + Amharic name; fall back if columns not migrated
   let data: any[] | null = null
   let error: { message: string } | null = null
 
-  {
+  const tries = [
+    'id, sku, name, name_am, price, cost, stock_qty, is_active, category, barcode',
+    'id, sku, name, name_am, price, cost, stock_qty, is_active, category',
+    'id, sku, name, price, cost, stock_qty, is_active, category, barcode',
+    'id, sku, name, price, cost, stock_qty, is_active, category',
+  ]
+
+  for (const cols of tries) {
     const res = await admin
       .from('products')
-      .select('id, sku, name, price, cost, stock_qty, is_active, category, barcode')
+      .select(cols)
       .gt('stock_qty', 0)
       .order('name', { ascending: true })
     data = res.data
     error = res.error
-    if (error) {
-      const msg = (error.message || '').toLowerCase()
-      if (msg.includes('column') || msg.includes('barcode')) {
-        const res2 = await admin
-          .from('products')
-          .select('id, sku, name, price, cost, stock_qty, is_active, category')
-          .gt('stock_qty', 0)
-          .order('name', { ascending: true })
-        data = res2.data
-        error = res2.error
-      }
-    }
+    if (!error) break
   }
 
   if (error) throw new Error(friendlyError(error.message))
@@ -100,6 +96,7 @@ export async function getAvailableProductsForSale() {
       id: row.id as string,
       sku: (row.sku as string) || '',
       name: (row.name as string) || '',
+      name_am: (row.name_am as string) || null,
       price: Number(row.price) || 0,
       cost: row.cost != null ? Number(row.cost) : 0,
       stock_qty: Number(row.stock_qty) || 0,

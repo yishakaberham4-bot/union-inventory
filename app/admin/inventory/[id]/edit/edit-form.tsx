@@ -52,14 +52,28 @@ export function EditProductForm({ product }: { product: Product }) {
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm text-slate-300 mb-1">Product name *</label>
-        <input
-          name="name"
-          required
-          defaultValue={product.name}
-          className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-emerald-500"
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm text-slate-300 mb-1">Product name (English) *</label>
+          <input
+            name="name"
+            required
+            defaultValue={product.name}
+            className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm text-slate-300 mb-1">Product name (Amharic) *</label>
+          <input
+            name="name_am"
+            required
+            lang="am"
+            dir="auto"
+            defaultValue={product.name_am || ''}
+            placeholder="ስም በአማርኛ"
+            className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
       </div>
 
       <div>

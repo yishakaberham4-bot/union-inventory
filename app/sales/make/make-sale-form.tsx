@@ -3,11 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createSale } from '@/app/actions/sales'
 import { useRouter } from 'next/navigation'
+import { useLanguage } from '@/app/components/LanguageToggle'
+import LanguageToggle from '@/app/components/LanguageToggle'
 
 type ProductOption = {
   id: string
   sku: string
   name: string
+  name_am?: string | null
   price: number
   cost: number
   stock_qty: number
@@ -26,6 +29,7 @@ export type SalesChartData = {
 type CartItem = {
   productId: string
   name: string
+  name_am?: string | null
   sku: string
   unitPrice: number
   cost: number
@@ -144,6 +148,7 @@ export default function MakeSaleForm({
   chart?: SalesChartData
 }) {
   const router = useRouter()
+  const lang = useLanguage()
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [productSearch, setProductSearch] = useState('')
   const [barcodeInput, setBarcodeInput] = useState('')
@@ -194,12 +199,18 @@ export default function MakeSaleForm({
       list = list.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
+          (p.name_am || '').toLowerCase().includes(q) ||
           p.sku.toLowerCase().includes(q) ||
           (p.barcode || '').toLowerCase().includes(q)
       )
     }
     return list
   }, [products, activeCategory, productSearch])
+
+  function displayName(p: { name: string; name_am?: string | null }) {
+    if (lang === 'am' && p.name_am && p.name_am.trim()) return p.name_am.trim()
+    return p.name
+  }
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('Notification' in window)) return
@@ -233,6 +244,7 @@ export default function MakeSaleForm({
         {
           productId: p.id,
           name: p.name,
+          name_am: p.name_am || null,
           sku: p.sku,
           unitPrice: p.price,
           cost: p.cost,
@@ -270,12 +282,12 @@ export default function MakeSaleForm({
       return
     }
     if (p.stock_qty <= 0) {
-      setMessage({ type: 'err', text: `${p.name} is out of stock` })
+      setMessage({ type: 'err', text: `${displayName(p)} is out of stock` })
       setBarcodeInput('')
       return
     }
     addToCart(p)
-    setScanFlash(`${p.name} added`)
+    setScanFlash(`${displayName(p)} added`)
     setBarcodeInput('')
     setMessage(null)
     // Keep focus for continuous scanning
@@ -515,7 +527,7 @@ export default function MakeSaleForm({
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="text-[15px] text-[#000] font-medium truncate leading-tight">
-                      {item.name}
+                      {displayName(item)}
                     </div>
                     <div className="text-[13px] text-[#8e8e93] mt-0.5">
                       Cost {item.cost.toFixed(2)}
@@ -599,6 +611,9 @@ export default function MakeSaleForm({
         >
           📊
         </button>
+        <div className="scale-90 origin-right">
+          <LanguageToggle />
+        </div>
       </div>
 
       {/* Barcode scanner — focus here; scanner types code + Enter */}
@@ -750,7 +765,7 @@ export default function MakeSaleForm({
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="text-[15px] font-medium text-[#000] truncate leading-tight">
-                          {p.name}
+                          {displayName(p)}
                         </div>
                         <div className="text-[13px] text-[#8e8e93] mt-0.5 truncate">
                           {p.sku || '—'} · stk {p.stock_qty}

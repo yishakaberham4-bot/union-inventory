@@ -106,18 +106,30 @@ export default function NewProductPage() {
             />
           </div>
 
-          <div>
-            <label className="block text-sm text-slate-300 mb-1">{t(lang, 'productName')}</label>
-            <input
-              name="name"
-              required
-              lang="am"
-              dir="auto"
-              placeholder={t(lang, 'productNamePlaceholder')}
-              className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-            <p className="text-xs text-amber-400/90 mt-1.5">{t(lang, 'productNameHint')}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-slate-300 mb-1">{t(lang, 'productNameEn')}</label>
+              <input
+                name="name"
+                required
+                lang="en"
+                placeholder={t(lang, 'productNameEnPlaceholder')}
+                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-300 mb-1">{t(lang, 'productNameAm')}</label>
+              <input
+                name="name_am"
+                required
+                lang="am"
+                dir="auto"
+                placeholder={t(lang, 'productNameAmPlaceholder')}
+                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
           </div>
+          <p className="text-xs text-amber-400/90 -mt-2">{t(lang, 'productNameHint')}</p>
 
           <div>
             <label className="block text-sm text-slate-300 mb-1">{t(lang, 'description')}</label>
