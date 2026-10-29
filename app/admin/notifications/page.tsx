@@ -3,7 +3,6 @@ import {
   getNotifications,
   markAllNotificationsRead,
   markNotificationRead,
-  deleteNotification,
   createTestNotification,
   checkAndNotifyOverdueCredits,
 } from '@/app/actions/notifications'
@@ -192,20 +191,6 @@ export default async function NotificationsPage() {
                       </button>
                     </form>
                   )}
-                  <form
-                    action={async () => {
-                      'use server'
-                      await deleteNotification(n.id)
-                    }}
-                  >
-                    <button
-                      type="submit"
-                      className="text-xs px-2 py-1 rounded-lg text-slate-500 hover:text-red-300 hover:bg-slate-800"
-                      title="Delete"
-                    >
-                      ✕
-                    </button>
-                  </form>
                 </div>
               </div>
             </li>

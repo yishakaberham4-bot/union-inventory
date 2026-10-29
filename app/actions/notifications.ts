@@ -192,16 +192,9 @@ export async function markAllNotificationsRead() {
   }
 }
 
-export async function deleteNotification(id: string) {
-  try {
-    const admin = getAdminClient()
-    const { error } = await admin.from('notifications').delete().eq('id', id)
-    if (error) return { error: error.message }
-    revalidatePath('/admin/notifications')
-    return { success: true }
-  } catch {
-    return { error: 'Failed' }
-  }
+export async function deleteNotification(_id: string) {
+  // Notifications cannot be deleted — they are kept as a permanent audit log
+  return { error: 'Notifications cannot be deleted' }
 }
 
 /** Insert a sample notification so you can verify the UI works */
