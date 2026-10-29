@@ -71,6 +71,8 @@ export async function getAvailableProductsForSale() {
   let error: { message: string } | null = null
 
   const tries = [
+    'id, sku, name, name_am, price, cost, stock_qty, is_active, category, barcode, unit',
+    'id, sku, name, name_am, price, cost, stock_qty, is_active, category, unit',
     'id, sku, name, name_am, price, cost, stock_qty, is_active, category, barcode',
     'id, sku, name, name_am, price, cost, stock_qty, is_active, category',
     'id, sku, name, price, cost, stock_qty, is_active, category, barcode',
@@ -102,6 +104,7 @@ export async function getAvailableProductsForSale() {
       stock_qty: Number(row.stock_qty) || 0,
       category: (row.category as string) || null,
       barcode: (row.barcode as string) || null,
+      unit: (row.unit as string) || 'pcs',
     }))
 }
 
@@ -188,7 +191,7 @@ async function insertSaleRow(
 export async function createSale(formData: FormData) {
   try {
     const productId = String(formData.get('product_id') || '').trim()
-    const quantity = parseInt(String(formData.get('quantity') || '0'), 10)
+    let quantity = parseFloat(String(formData.get('quantity') || '0'))
     const saleTypeRaw = String(formData.get('sale_type') || 'cash')
       .trim()
       .toLowerCase()
@@ -208,8 +211,13 @@ export async function createSale(formData: FormData) {
     const reason = String(formData.get('reason') || '').trim()
 
     if (!productId) return { error: 'Please select a product' }
-    if (isNaN(quantity) || quantity < 1) {
-      return { error: 'Quantity must be at least 1' }
+    if (isNaN(quantity) || quantity <= 0) {
+      return { error: 'Quantity must be greater than 0 (e.g. 0.1 for kg)' }
+    }
+    // Round to 3 decimals to avoid float noise (supports 0.1, 5.1, 10.5 kg)
+    quantity = Number(quantity.toFixed(3))
+    if (quantity <= 0) {
+      return { error: 'Quantity must be greater than 0' }
     }
     if (isNaN(unitPriceInput) || unitPriceInput < 0) {
       return { error: 'Selling price must be 0 or greater' }

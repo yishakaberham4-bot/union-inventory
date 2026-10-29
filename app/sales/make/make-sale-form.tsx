@@ -16,6 +16,7 @@ type ProductOption = {
   stock_qty: number
   category?: string | null
   barcode?: string | null
+  unit?: string | null
 }
 
 export type SalesChartData = {
@@ -35,6 +36,7 @@ type CartItem = {
   cost: number
   quantity: number
   maxStock: number
+  unit?: string | null
 }
 
 const BANKS = [
@@ -229,16 +231,31 @@ export default function MakeSaleForm({
     [chartDays]
   )
 
-  function addToCart(p: ProductOption) {
+  function qtyStep(unit?: string | null) {
+    return (unit || 'pcs').toLowerCase() === 'kg' ? 0.1 : 1
+  }
+
+  function roundQty(n: number, unit?: string | null) {
+    const step = qtyStep(unit)
+    if (step < 1) return Number(n.toFixed(3))
+    return Math.round(n)
+  }
+
+  function addToCart(p: ProductOption, amount?: number) {
+    const unit = p.unit || 'pcs'
+    const step = amount ?? qtyStep(unit)
     setCart((prev) => {
       const idx = prev.findIndex((c) => c.productId === p.id)
       if (idx >= 0) {
         const existing = prev[idx]
-        if (existing.quantity >= existing.maxStock) return prev
+        const nextQty = roundQty(existing.quantity + step, unit)
+        if (nextQty > existing.maxStock + 1e-9) return prev
         const next = [...prev]
-        next[idx] = { ...existing, quantity: existing.quantity + 1 }
+        next[idx] = { ...existing, quantity: nextQty }
         return next
       }
+      const initial = roundQty(step, unit)
+      if (initial > p.stock_qty + 1e-9) return prev
       return [
         ...prev,
         {
@@ -248,8 +265,9 @@ export default function MakeSaleForm({
           sku: p.sku,
           unitPrice: p.price,
           cost: p.cost,
-          quantity: 1,
+          quantity: initial,
           maxStock: p.stock_qty,
+          unit,
         },
       ]
     })
@@ -300,7 +318,10 @@ export default function MakeSaleForm({
       const next = [...prev]
       const item = next[index]
       if (!item) return prev
-      const q = Math.max(1, Math.min(item.maxStock, qty))
+      const minQ = qtyStep(item.unit)
+      let q = roundQty(qty, item.unit)
+      if (q < minQ) q = minQ
+      if (q > item.maxStock) q = roundQty(item.maxStock, item.unit)
       next[index] = { ...item, quantity: q }
       return next
     })
@@ -548,7 +569,10 @@ export default function MakeSaleForm({
                     <div className="text-[15px] font-semibold text-[#000] tabular-nums">
                       {lineTotal.toFixed(2)}
                     </div>
-                    <div className="text-[12px] text-[#8e8e93]">×{item.quantity}</div>
+                    <div className="text-[12px] text-[#8e8e93]">
+                      ×{item.quantity}
+                      {item.unit ? ` ${item.unit}` : ''}
+                    </div>
                   </div>
                 </div>
                 <div
@@ -564,6 +588,27 @@ export default function MakeSaleForm({
                       updateUnitPrice(index, n)
                     }}
                   />
+                  <span className="text-[12px] text-[#8e8e93] ml-1">Qty</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={String(item.quantity)}
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^0-9.]/g, '')
+                      const n = parseFloat(raw)
+                      if (!isNaN(n)) updateQty(index, n)
+                    }}
+                    onBlur={(e) => {
+                      const n = parseFloat(e.target.value)
+                      updateQty(index, isNaN(n) ? qtyStep(item.unit) : n)
+                    }}
+                    className="w-[4.5rem] rounded-lg bg-[#f0f2f5] border-0 px-2 py-1.5 text-[14px] font-semibold tabular-nums focus:outline-none focus:ring-2 focus:ring-[#2AABEE]"
+                  />
+                  <span className="text-[11px] text-[#8e8e93]">
+                    {item.unit || 'pcs'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -769,6 +814,7 @@ export default function MakeSaleForm({
                         </div>
                         <div className="text-[13px] text-[#8e8e93] mt-0.5 truncate">
                           {p.sku || '—'} · stk {p.stock_qty}
+                          {p.unit ? ` ${p.unit}` : ''}
                         </div>
                         <div className="text-[12px] text-[#8e8e93] mt-0.5">
                           Cost {p.cost.toFixed(2)}
@@ -796,7 +842,7 @@ export default function MakeSaleForm({
               if (selectedCartIndex == null) return
               const item = cart[selectedCartIndex]
               if (!item) return
-              updateQty(selectedCartIndex, item.quantity + 1)
+              updateQty(selectedCartIndex, item.quantity + qtyStep(item.unit))
             }}
             className="w-10 h-10 rounded-full bg-[#f0f2f5] text-[#2481cc] text-xl font-medium disabled:opacity-30 touch-manipulation flex items-center justify-center"
             aria-label="Increase"
@@ -810,8 +856,9 @@ export default function MakeSaleForm({
               if (selectedCartIndex == null) return
               const item = cart[selectedCartIndex]
               if (!item) return
-              if (item.quantity <= 1) removeFromCart(selectedCartIndex)
-              else updateQty(selectedCartIndex, item.quantity - 1)
+              const step = qtyStep(item.unit)
+              if (item.quantity <= step + 1e-9) removeFromCart(selectedCartIndex)
+              else updateQty(selectedCartIndex, item.quantity - step)
             }}
             className="w-10 h-10 rounded-full bg-[#f0f2f5] text-[#2481cc] text-xl font-medium disabled:opacity-30 touch-manipulation flex items-center justify-center"
             aria-label="Decrease"

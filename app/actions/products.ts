@@ -31,6 +31,8 @@ export interface Product {
   image_url?: string | null
   /** Barcode from product packaging (EAN/UPC/etc.) */
   barcode?: string | null
+  /** Unit of measure: pcs | kg | cup | bottle | packages */
+  unit?: string | null
 }
 
 function getAdminClient() {
@@ -143,6 +145,7 @@ function mapProduct(row: any): Product {
         : null,
     image_url: row.image_url ?? null,
     barcode: row.barcode ?? null,
+    unit: row.unit ?? 'pcs',
   }
 }
 
@@ -196,9 +199,13 @@ export async function createProduct(formData: FormData) {
   const description = String(formData.get('description') || '').trim() || null
   const category = String(formData.get('category') || '').trim() || null
   const barcode = String(formData.get('barcode') || '').trim() || null
+  const unitRaw = String(formData.get('unit') || 'pcs').trim().toLowerCase()
+  const allowedUnits = ['pcs', 'kg', 'cup', 'bottle', 'packages']
+  const unit = allowedUnits.includes(unitRaw) ? unitRaw : 'pcs'
   const price = parseFloat(String(formData.get('price') || '0'))
   const cost = parseFloat(String(formData.get('cost') || '0'))
-  const stock_qty = parseInt(String(formData.get('stock_qty') || '0'), 10)
+  // kg can be fractional stock; others usually whole — still allow decimals
+  const stock_qty = parseFloat(String(formData.get('stock_qty') || '0'))
   const low_stock_threshold = parseInt(
     String(formData.get('low_stock_threshold') || '5'),
     10
@@ -223,8 +230,8 @@ export async function createProduct(formData: FormData) {
   if (isNaN(stock_qty) || stock_qty < 0) {
     return { error: 'Stock quantity must be a valid number ≥ 0' }
   }
-  if (purchaseType === 'credit' && stock_qty < 1) {
-    return { error: 'Credit purchase requires stock quantity ≥ 1' }
+  if (purchaseType === 'credit' && stock_qty <= 0) {
+    return { error: 'Credit purchase requires stock quantity > 0' }
   }
 
   const costVal = isNaN(cost) ? 0 : cost
@@ -264,6 +271,7 @@ export async function createProduct(formData: FormData) {
   if (imageUrl) {
     basePayload.image_url = imageUrl
   }
+  basePayload.unit = unit
   const fullPayload = {
     ...basePayload,
     purchase_type: purchaseType,
@@ -329,9 +337,12 @@ export async function updateProduct(formData: FormData) {
   const nameAm = String(formData.get('name_am') || '').trim() || null
   const description = String(formData.get('description') || '').trim() || null
   const category = String(formData.get('category') || '').trim() || null
+  const unitRaw = String(formData.get('unit') || 'pcs').trim().toLowerCase()
+  const allowedUnits = ['pcs', 'kg', 'cup', 'bottle', 'packages']
+  const unit = allowedUnits.includes(unitRaw) ? unitRaw : 'pcs'
   const price = parseFloat(String(formData.get('price') || '0'))
   const cost = parseFloat(String(formData.get('cost') || '0'))
-  const stock_qty = parseInt(String(formData.get('stock_qty') || '0'), 10)
+  const stock_qty = parseFloat(String(formData.get('stock_qty') || '0'))
   const low_stock_threshold = parseInt(
     String(formData.get('low_stock_threshold') || '5'),
     10
@@ -355,6 +366,7 @@ export async function updateProduct(formData: FormData) {
     updated_at: new Date().toISOString(),
   }
   if (nameAm) updatePayload.name_am = nameAm
+  updatePayload.unit = unit
 
   let { error } = await admin.from('products').update(updatePayload).eq('id', id)
   if (error) {

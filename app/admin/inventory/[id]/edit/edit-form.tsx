@@ -86,7 +86,22 @@ export function EditProductForm({ product }: { product: Product }) {
         />
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm text-slate-300 mb-1">Unit *</label>
+          <select
+            name="unit"
+            required
+            defaultValue={product.unit || 'pcs'}
+            className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="pcs">pcs</option>
+            <option value="kg">kg</option>
+            <option value="cup">cup</option>
+            <option value="bottle">bottle</option>
+            <option value="packages">packages</option>
+          </select>
+        </div>
         <div>
           <label className="block text-sm text-slate-300 mb-1">Sell price *</label>
           <input
@@ -116,6 +131,7 @@ export function EditProductForm({ product }: { product: Product }) {
             name="stock_qty"
             type="number"
             min="0"
+            step="any"
             required
             defaultValue={product.stock_qty}
             className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-emerald-500"
@@ -127,6 +143,7 @@ export function EditProductForm({ product }: { product: Product }) {
             name="low_stock_threshold"
             type="number"
             min="0"
+            step="any"
             defaultValue={product.low_stock_threshold}
             className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-emerald-500"
           />
