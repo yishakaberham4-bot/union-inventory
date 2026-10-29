@@ -66,7 +66,7 @@ function friendlyError(message: string): string {
 
 export async function getAvailableProductsForSale() {
   const admin = getAdminClient()
-  // Prefer barcode + Amharic name; fall back if columns not migrated
+  // Prefer barcode + Amharic name + unit; fall back if columns not migrated
   let data: any[] | null = null
   let error: { message: string } | null = null
 
@@ -77,8 +77,10 @@ export async function getAvailableProductsForSale() {
     'id, sku, name, name_am, price, cost, stock_qty, is_active, category',
     'id, sku, name, price, cost, stock_qty, is_active, category, barcode',
     'id, sku, name, price, cost, stock_qty, is_active, category',
+    'id, sku, name, price, cost, stock_qty, is_active',
   ]
 
+  // First try: in-stock only
   for (const cols of tries) {
     const res = await admin
       .from('products')
@@ -90,10 +92,27 @@ export async function getAvailableProductsForSale() {
     if (!error) break
   }
 
+  // Fallback: load all products then filter stock in JS (avoids numeric/filter quirks)
+  if (error || !data || data.length === 0) {
+    for (const cols of tries) {
+      const res = await admin
+        .from('products')
+        .select(cols)
+        .order('name', { ascending: true })
+        .limit(2000)
+      if (!res.error) {
+        data = (res.data || []).filter((row: any) => Number(row.stock_qty) > 0)
+        error = null
+        break
+      }
+      error = res.error
+    }
+  }
+
   if (error) throw new Error(friendlyError(error.message))
 
   return (data || [])
-    .filter((row) => row.is_active !== false)
+    .filter((row) => row.is_active !== false && Number(row.stock_qty) > 0)
     .map((row) => ({
       id: row.id as string,
       sku: (row.sku as string) || '',
@@ -922,4 +941,45 @@ export async function getSalesChartSummary(days = 7): Promise<{
     weekRevenue,
     weekCount,
   }
+}
+
+
+/** Sales history for one product (inventory detail modal) */
+export async function getProductSalesHistory(
+  productId: string,
+  limit = 50
+): Promise<
+  {
+    id: string
+    quantity: number
+    unit_price: number
+    total_amount: number
+    sale_type: string
+    created_at: string
+    sold_by_email?: string | null
+  }[]
+> {
+  if (!productId) return []
+  const admin = getAdminClient()
+  const { data, error } = await admin
+    .from('sales')
+    .select('id, quantity, unit_price, total_amount, sale_type, created_at, sold_by_email, product_id')
+    .eq('product_id', productId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.warn('[getProductSalesHistory]', error.message)
+    return []
+  }
+
+  return (data || []).map((row) => ({
+    id: row.id as string,
+    quantity: Number(row.quantity) || 0,
+    unit_price: Number(row.unit_price) || 0,
+    total_amount: Number(row.total_amount) || 0,
+    sale_type: (row.sale_type as string) || 'cash',
+    created_at: (row.created_at as string) || '',
+    sold_by_email: (row.sold_by_email as string) || null,
+  }))
 }

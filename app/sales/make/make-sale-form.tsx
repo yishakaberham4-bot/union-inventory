@@ -5,6 +5,7 @@ import { createSale } from '@/app/actions/sales'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/app/components/LanguageToggle'
 import LanguageToggle from '@/app/components/LanguageToggle'
+import { t } from '@/app/lib/i18n'
 
 type ProductOption = {
   id: string
@@ -641,7 +642,7 @@ export default function MakeSaleForm({
                       {displayName(item)}
                     </div>
                     <div className="text-[13px] text-[#8e8e93] mt-0.5">
-                      Cost {item.cost.toFixed(2)}
+                      Cost {(Number(item.cost) || 0).toFixed(2)}
                       {item.unitPrice > 0 && (
                         <span>
                           {' '}
@@ -912,11 +913,11 @@ export default function MakeSaleForm({
                           </span>
                         </div>
                         <div className="text-[12px] text-[#8e8e93] mt-0.5">
-                          Cost {p.cost.toFixed(2)}
+                          Cost {(Number(p.cost) || 0).toFixed(2)}
                         </div>
                       </div>
                       <div className="text-[15px] font-semibold text-[#000] tabular-nums shrink-0">
-                        {p.price.toFixed(2)}
+                        {(Number(p.price) || 0).toFixed(2)}
                       </div>
                     </div>
                   </div>

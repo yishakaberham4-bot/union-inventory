@@ -1,14 +1,22 @@
+import Link from 'next/link'
 import {
   getAvailableProductsForSale,
   getSalesChartSummary,
 } from '@/app/actions/sales'
 import MakeSaleForm from './make-sale-form'
 
+export const dynamic = 'force-dynamic'
+
 export default async function MakeSalePage() {
   let products: Awaited<ReturnType<typeof getAvailableProductsForSale>> = []
   let loadError: string | null = null
   let chart = {
-    days: [] as { date: string; label: string; revenue: number; count: number }[],
+    days: [] as {
+      date: string
+      label: string
+      revenue: number
+      count: number
+    }[],
     todayRevenue: 0,
     todayCount: 0,
     weekRevenue: 0,
@@ -19,37 +27,51 @@ export default async function MakeSalePage() {
     products = await getAvailableProductsForSale()
   } catch (e) {
     loadError = e instanceof Error ? e.message : 'Failed to load products'
+    console.error('[MakeSalePage] products', loadError)
   }
 
   try {
     chart = await getSalesChartSummary(7)
-  } catch {
-    // chart optional
+  } catch (e) {
+    console.error('[MakeSalePage] chart', e)
   }
 
   return (
-    <div className="w-full h-full min-h-0 flex-1 flex flex-col overflow-hidden relative bg-white md:bg-transparent">
-      {/* Desktop-only title row */}
-      <div className="hidden md:flex items-center justify-between gap-4 max-w-[1400px] mx-auto px-4 w-full mb-3 pt-2 shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white text-lg shadow-lg shadow-violet-500/30">
-            🛒
-          </div>
-          <div>
-            <h1 className="text-xl font-black text-slate-900 tracking-tight">
-              Make Sale
-            </h1>
-            <p className="text-xs text-slate-500">
-              POS terminal — select products, build cart, checkout
-            </p>
-          </div>
-        </div>
+    <div className="w-full h-full min-h-0 flex-1 flex flex-col overflow-hidden relative bg-white text-black">
+      <div className="md:hidden shrink-0 px-3 py-2 border-b border-slate-200 flex items-center justify-between bg-white">
+        <Link href="/sales/pos" className="text-sm text-slate-600">
+          ← Terminal
+        </Link>
+        <span className="text-sm font-semibold text-slate-900">Make Sale</span>
+        <span className="w-16" />
       </div>
 
       {loadError ? (
-        <div className="max-w-xl mx-auto m-4 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-800 text-sm space-y-2">
-          <p className="font-semibold">Unable to load products</p>
-          <p className="text-red-600/90 text-xs">{loadError}</p>
+        <div className="m-4 rounded-2xl border border-red-300 bg-red-50 p-5 text-red-900 text-sm space-y-3 max-w-lg">
+          <p className="font-semibold text-base">Unable to load products</p>
+          <p className="text-xs font-mono break-all text-red-700">{loadError}</p>
+          <p className="text-xs text-red-800">
+            Vercel → Settings → Environment Variables → set{' '}
+            <code className="bg-red-100 px-1">SUPABASE_SERVICE_ROLE_KEY</code> →
+            Redeploy. Also ensure products have stock &gt; 0.
+          </p>
+          <Link
+            href="/sales/pos"
+            className="inline-block px-4 py-2 rounded-xl bg-slate-900 text-white text-sm"
+          >
+            ← Back to terminal
+          </Link>
+        </div>
+      ) : products.length === 0 ? (
+        <div className="m-4 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950 text-sm space-y-2 max-w-lg">
+          <p className="font-semibold">No products available for sale</p>
+          <p className="text-xs">
+            Add products in Admin → Inventory and set stock quantity greater than
+            0.
+          </p>
+          <Link href="/sales/pos" className="text-sm text-amber-800 underline">
+            ← Terminal
+          </Link>
         </div>
       ) : (
         <div className="flex-1 min-h-0 flex flex-col w-full overflow-hidden">
