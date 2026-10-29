@@ -75,6 +75,77 @@ const BOTTOM_ICONS: Record<string, string> = {
 }
 
 
+
+/** Quantity field — supports decimals for kg (0.1, 5.1, 10.5) */
+function CartQtyInput({
+  value,
+  unit,
+  max,
+  onCommit,
+}: {
+  value: number
+  unit?: string | null
+  max: number
+  onCommit: (n: number) => void
+}) {
+  const [text, setText] = useState(String(value))
+  const focused = useRef(false)
+  const kg = (() => {
+    const u = String(unit || '').toLowerCase()
+    return u === 'kg' || u === 'kgs' || u.startsWith('kg')
+  })()
+
+  useEffect(() => {
+    if (!focused.current) setText(String(value))
+  }, [value])
+
+  function commit(raw: string) {
+    const cleaned = raw.replace(/,/g, '.').trim()
+    let n = parseFloat(cleaned)
+    if (isNaN(n) || n <= 0) n = kg ? 0.1 : 1
+    if (kg) n = Math.round(n * 10) / 10
+    else n = Math.max(1, Math.round(n))
+    if (n > max) n = kg ? Math.round(max * 10) / 10 : Math.floor(max)
+    if (n <= 0) n = kg ? 0.1 : 1
+    onCommit(n)
+    setText(String(n))
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      enterKeyHint="done"
+      value={text}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onFocus={(e) => {
+        e.stopPropagation()
+        focused.current = true
+        requestAnimationFrame(() => e.target.select())
+      }}
+      onChange={(e) => {
+        let raw = e.target.value.replace(/[^0-9.]/g, '')
+        const parts = raw.split('.')
+        if (parts.length > 2) raw = parts[0] + '.' + parts.slice(1).join('')
+        setText(raw)
+      }}
+      onBlur={(e) => {
+        focused.current = false
+        commit(e.target.value)
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          ;(e.target as HTMLInputElement).blur()
+        }
+      }}
+      className="w-[4.5rem] rounded-lg bg-[#f0f2f5] border border-transparent px-2 py-1.5 text-[14px] font-semibold tabular-nums focus:outline-none focus:ring-2 focus:ring-[#2AABEE] focus:bg-white"
+      aria-label="Quantity"
+    />
+  )
+}
+
 /** Local price field — keeps keyboard open and saves on blur / Enter */
 function CartPriceInput({
   value,
@@ -231,27 +302,44 @@ export default function MakeSaleForm({
     [chartDays]
   )
 
+  function normalizeUnit(unit?: string | null) {
+    return String(unit || 'pcs').trim().toLowerCase()
+  }
+
+  function isKgUnit(unit?: string | null) {
+    const u = normalizeUnit(unit)
+    return u === 'kg' || u === 'kgs' || u.startsWith('kg')
+  }
+
+  /** Step: 0.1 for kg, 1 for everything else */
   function qtyStep(unit?: string | null) {
-    return (unit || 'pcs').toLowerCase() === 'kg' ? 0.1 : 1
+    return isKgUnit(unit) ? 0.1 : 1
   }
 
   function roundQty(n: number, unit?: string | null) {
-    const step = qtyStep(unit)
-    if (step < 1) return Number(n.toFixed(3))
-    return Math.round(n)
+    if (!Number.isFinite(n)) return qtyStep(unit)
+    if (isKgUnit(unit)) {
+      // Snap to 0.1 (supports 0.1, 5.1, 10.5)
+      return Math.round(n * 10) / 10
+    }
+    return Math.max(1, Math.round(n))
   }
 
   function addToCart(p: ProductOption, amount?: number) {
-    const unit = p.unit || 'pcs'
-    const step = amount ?? qtyStep(unit)
+    const unit = normalizeUnit(p.unit)
+    const step = amount != null ? amount : qtyStep(unit)
     setCart((prev) => {
       const idx = prev.findIndex((c) => c.productId === p.id)
       if (idx >= 0) {
         const existing = prev[idx]
-        const nextQty = roundQty(existing.quantity + step, unit)
+        const nextQty = roundQty(existing.quantity + step, existing.unit || unit)
         if (nextQty > existing.maxStock + 1e-9) return prev
         const next = [...prev]
-        next[idx] = { ...existing, quantity: nextQty }
+        next[idx] = {
+          ...existing,
+          quantity: nextQty,
+          unit: existing.unit || unit,
+        }
         return next
       }
       const initial = roundQty(step, unit)
@@ -320,8 +408,10 @@ export default function MakeSaleForm({
       if (!item) return prev
       const minQ = qtyStep(item.unit)
       let q = roundQty(qty, item.unit)
-      if (q < minQ) q = minQ
-      if (q > item.maxStock) q = roundQty(item.maxStock, item.unit)
+      if (q < minQ - 1e-9) q = minQ
+      if (q > item.maxStock + 1e-9) q = roundQty(item.maxStock, item.unit)
+      // Never exceed stock
+      if (q > item.maxStock) q = item.maxStock
       next[index] = { ...item, quantity: q }
       return next
     })
@@ -589,25 +679,22 @@ export default function MakeSaleForm({
                     }}
                   />
                   <span className="text-[12px] text-[#8e8e93] ml-1">Qty</span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={String(item.quantity)}
-                    onClick={(e) => e.stopPropagation()}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onChange={(e) => {
-                      const raw = e.target.value.replace(/[^0-9.]/g, '')
-                      const n = parseFloat(raw)
-                      if (!isNaN(n)) updateQty(index, n)
+                  <CartQtyInput
+                    value={item.quantity}
+                    unit={item.unit}
+                    max={item.maxStock}
+                    onCommit={(n) => {
+                      setSelectedCartIndex(index)
+                      updateQty(index, n)
                     }}
-                    onBlur={(e) => {
-                      const n = parseFloat(e.target.value)
-                      updateQty(index, isNaN(n) ? qtyStep(item.unit) : n)
-                    }}
-                    className="w-[4.5rem] rounded-lg bg-[#f0f2f5] border-0 px-2 py-1.5 text-[14px] font-semibold tabular-nums focus:outline-none focus:ring-2 focus:ring-[#2AABEE]"
                   />
-                  <span className="text-[11px] text-[#8e8e93]">
+                  <span
+                    className={`text-[11px] font-medium ${
+                      isKgUnit(item.unit) ? 'text-emerald-600' : 'text-[#8e8e93]'
+                    }`}
+                  >
                     {item.unit || 'pcs'}
+                    {isKgUnit(item.unit) ? ' (±0.1)' : ''}
                   </span>
                 </div>
               </div>
@@ -813,8 +900,16 @@ export default function MakeSaleForm({
                           {displayName(p)}
                         </div>
                         <div className="text-[13px] text-[#8e8e93] mt-0.5 truncate">
-                          {p.sku || '—'} · stk {p.stock_qty}
-                          {p.unit ? ` ${p.unit}` : ''}
+                          {p.sku || '—'} · stk {p.stock_qty}{' '}
+                          <span
+                            className={
+                              isKgUnit(p.unit)
+                                ? 'text-emerald-600 font-semibold'
+                                : ''
+                            }
+                          >
+                            {normalizeUnit(p.unit)}
+                          </span>
                         </div>
                         <div className="text-[12px] text-[#8e8e93] mt-0.5">
                           Cost {p.cost.toFixed(2)}
