@@ -167,34 +167,6 @@ export default async function AdminGraphicReportPage({
   const totalRev = buckets.reduce((s, b) => s + b.revenue, 0)
   const totalCount = buckets.reduce((s, b) => s + b.count, 0)
 
-  const last = buckets.length ? buckets[buckets.length - 1] : null
-  const prev = buckets.length > 1 ? buckets[buckets.length - 2] : null
-  const delta = last && prev ? last.revenue - prev.revenue : 0
-  const deltaPct =
-    last && prev && prev.revenue > 0
-      ? ((last.revenue - prev.revenue) / prev.revenue) * 100
-      : last && prev && last.revenue > 0
-        ? 100
-        : 0
-
-  const withChange = buckets.map((b, i) => {
-    const before = i > 0 ? buckets[i - 1].revenue : null
-    const change = before == null ? null : b.revenue - before
-    return { ...b, change }
-  })
-
-  const w = 100
-  const h = 40
-  const pts = buckets.map((b, i) => {
-    const x = buckets.length <= 1 ? w / 2 : (i / (buckets.length - 1)) * w
-    const y = h - (b.revenue / maxRev) * (h - 2) - 1
-    return `${x},${y}`
-  })
-  const linePath = pts.length ? `M ${pts.join(' L ')}` : ''
-  const areaPath = pts.length
-    ? `M 0,${h} L ${pts.join(' L ')} L ${w},${h} Z`
-    : ''
-
   const views: { key: ViewMode; label: string }[] = [
     { key: 'daily', label: 'Daily' },
     { key: 'weekly', label: 'Weekly' },
@@ -270,108 +242,43 @@ export default async function AdminGraphicReportPage({
         </div>
       </div>
 
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wide">
-            {view} sales chart
-          </h2>
-          {last && prev ? (
-            <div
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold ${
-                delta >= 0
-                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                  : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-              }`}
-            >
-              <span className="text-base leading-none">{delta >= 0 ? '▲' : '▼'}</span>
-              <span>
-                {delta >= 0 ? '+' : ''}
-                {formatMoney(delta)}
-              </span>
-              <span className="text-xs opacity-80">
-                ({deltaPct >= 0 ? '+' : ''}
-                {deltaPct.toFixed(1)}% vs previous)
-              </span>
-            </div>
-          ) : null}
-        </div>
-
+      <section>
+        <h2 className="text-sm font-medium text-slate-400 mb-3 uppercase tracking-wide">
+          {view} sales chart
+        </h2>
         {buckets.length === 0 ? (
           <p className="text-slate-500 text-sm py-8 text-center">
             Choose a date range and click Generate report.
           </p>
         ) : (
-          <>
-            <div className="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 p-4 overflow-hidden">
-              <svg
-                viewBox={`0 0 ${w} ${h}`}
-                className="w-full h-28 sm:h-36"
-                preserveAspectRatio="none"
-              >
-                <defs>
-                  <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="rgb(16 185 129)" stopOpacity="0.45" />
-                    <stop offset="100%" stopColor="rgb(16 185 129)" stopOpacity="0.02" />
-                  </linearGradient>
-                </defs>
-                <path d={areaPath} fill="url(#revFill)" />
-                <path
-                  d={linePath}
-                  fill="none"
-                  stroke="rgb(52 211 153)"
-                  strokeWidth="0.8"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </svg>
-            </div>
-
-            <div className="flex items-end gap-1.5 h-56 overflow-x-auto pb-1">
-              {withChange.map((b) => {
-                const pct = (b.revenue / maxRev) * 100
-                const up = b.change != null && b.change > 0
-                const down = b.change != null && b.change < 0
-                return (
-                  <div
-                    key={b.key}
-                    className="flex-1 min-w-[36px] flex flex-col items-center gap-1"
-                  >
-                    <div className="h-4 flex items-center justify-center">
-                      {up ? (
-                        <span className="text-[10px] text-emerald-400 font-bold">▲</span>
-                      ) : down ? (
-                        <span className="text-[10px] text-rose-400 font-bold">▼</span>
-                      ) : (
-                        <span className="text-[10px] text-slate-600">·</span>
-                      )}
-                    </div>
-                    <span className="text-[9px] text-slate-400 truncate w-full text-center tabular-nums">
-                      {b.revenue > 0 ? formatMoney(b.revenue) : ''}
-                    </span>
-                    <div className="w-full flex-1 flex items-end min-h-[80px]">
-                      <div
-                        className={`w-full rounded-t-lg min-h-[3px] transition-all shadow-lg ${
-                          up
-                            ? 'bg-gradient-to-t from-emerald-700 to-emerald-400 shadow-emerald-900/40'
-                            : down
-                              ? 'bg-gradient-to-t from-rose-800 to-rose-400 shadow-rose-900/30'
-                              : view === 'daily'
-                                ? 'bg-gradient-to-t from-emerald-800 to-emerald-500/90'
-                                : view === 'weekly'
-                                  ? 'bg-gradient-to-t from-blue-800 to-sky-400'
-                                  : 'bg-gradient-to-t from-purple-900 to-fuchsia-400'
-                        }`}
-                        style={{ height: `${Math.max(b.revenue > 0 ? 6 : 2, pct)}%` }}
-                        title={`${b.label}: ${formatMoney(b.revenue)} (${b.count} sales)`}
-                      />
-                    </div>
-                    <span className="text-[10px] text-slate-500 truncate w-full text-center">
-                      {b.label}
-                    </span>
+          <div className="flex items-end gap-1.5 h-52 overflow-x-auto">
+            {buckets.map((b) => {
+              const pct = (b.revenue / maxRev) * 100
+              return (
+                <div key={b.key} className="flex-1 min-w-[28px] flex flex-col items-center gap-1">
+                  <span className="text-[10px] text-slate-500 truncate w-full text-center">
+                    {b.revenue > 0 ? formatMoney(b.revenue) : ''}
+                  </span>
+                  <div className="w-full flex-1 flex items-end">
+                    <div
+                      className={`w-full rounded-t min-h-[2px] ${
+                        view === 'daily'
+                          ? 'bg-emerald-500/80'
+                          : view === 'weekly'
+                            ? 'bg-blue-500/80'
+                            : 'bg-purple-500/80'
+                      }`}
+                      style={{ height: `${Math.max(b.revenue > 0 ? 4 : 2, pct)}%` }}
+                      title={`${b.label}: ${formatMoney(b.revenue)} (${b.count} sales)`}
+                    />
                   </div>
-                )
-              })}
-            </div>
-          </>
+                  <span className="text-[10px] text-slate-500 truncate w-full text-center">
+                    {b.label}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
         )}
       </section>
 
