@@ -1,14 +1,18 @@
 {
   "id": "/",
   "name": "Union Inventory",
-  "short_name": "Union Inv",
-  "description": "Shop Management System - Union Computers & Software",
+  "short_name": "Union",
+  "description": "Union Shop Management System — Inventory & Sales",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#020617",
   "theme_color": "#020617",
   "orientation": "any",
+  "categories": ["business", "finance", "productivity"],
+  "lang": "en",
+  "dir": "ltr",
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -34,5 +38,7 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
 }

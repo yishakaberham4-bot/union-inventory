@@ -613,7 +613,7 @@ export default function MakeSaleForm({
     if (cart.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center py-4 px-6 text-center">
-          <p className="text-[#8e8e93] text-[13px]">Cart empty — tap a product below</p>
+          <p className="text-[#8e8e93] text-[13px]">{t(lang, 'cartEmpty')}</p>
         </div>
       )
     }
@@ -772,7 +772,7 @@ export default function MakeSaleForm({
                 handleBarcodeScan(barcodeInput)
               }
             }}
-            placeholder="Scan barcode…"
+            placeholder={t(lang, 'scanBarcode')}
             className="flex-1 bg-transparent border-0 text-[15px] text-[#000] placeholder:text-[#8e8e93] focus:outline-none font-mono tracking-wide"
             autoComplete="off"
             autoCorrect="off"
@@ -800,7 +800,7 @@ export default function MakeSaleForm({
               setProductSearch(e.target.value)
               if (e.target.value) setActiveCategory(null)
             }}
-            placeholder="Search name / SKU"
+            placeholder={t(lang, 'searchNameSku')}
             className="flex-1 bg-transparent border-0 text-[15px] text-[#000] placeholder:text-[#8e8e93] focus:outline-none"
             enterKeyHint="search"
             autoComplete="off"

@@ -2,24 +2,26 @@
 
 import Link from 'next/link'
 import LanguageToggle, { useLanguage } from '@/app/components/LanguageToggle'
+import InstallPrompt from '@/app/components/InstallPrompt'
 import { t } from '@/app/lib/i18n'
 
 export default function HomeClient({ logoUrl }: { logoUrl: string }) {
   const lang = useLanguage()
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-6">
+    <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
+      <InstallPrompt />
       <div className="max-w-md w-full text-center space-y-6">
         <div className="flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={logoUrl}
-            alt="Union Computers & Software"
+            src={logoUrl || '/icons/icon-512.png'}
+            alt="Union"
             width={200}
             height={200}
             className="object-contain drop-shadow-lg w-[180px] h-[180px] sm:w-[200px] sm:h-[200px]"
             onError={(e) => {
-              ;(e.target as HTMLImageElement).src = '/icons/icon-192.png'
+              ;(e.target as HTMLImageElement).src = '/icons/icon-512.png'
             }}
           />
         </div>
@@ -31,7 +33,6 @@ export default function HomeClient({ logoUrl }: { logoUrl: string }) {
           <p className="text-slate-400 text-sm mt-2">{t(lang, 'tagline')}</p>
         </div>
 
-        {/* Language switch on home page */}
         <div className="flex flex-col items-center gap-2 pt-1">
           <span className="text-xs text-slate-500 uppercase tracking-wider">
             {t(lang, 'language')}

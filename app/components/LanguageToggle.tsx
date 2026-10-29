@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { LANG_STORAGE_KEY, type Lang } from '@/app/lib/i18n'
 
 type Props = {
-  /** Called when language changes (optional) */
   onChange?: (lang: Lang) => void
   className?: string
 }
@@ -26,7 +25,6 @@ export default function LanguageToggle({ onChange, className = '' }: Props) {
     localStorage.setItem(LANG_STORAGE_KEY, next)
     document.documentElement.lang = next === 'am' ? 'am' : 'en'
     onChange?.(next)
-    // Notify other components on same page
     window.dispatchEvent(new CustomEvent('language-change', { detail: next }))
   }
 
@@ -67,14 +65,12 @@ export default function LanguageToggle({ onChange, className = '' }: Props) {
   )
 }
 
-/** Hook to read current language and react to changes */
 export function useLanguage(): Lang {
   const [lang, setLang] = useState<Lang>('en')
 
   useEffect(() => {
     const saved = (localStorage.getItem(LANG_STORAGE_KEY) as Lang) || 'en'
     setLang(saved === 'am' ? 'am' : 'en')
-
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<Lang>).detail
       if (detail === 'am' || detail === 'en') setLang(detail)
