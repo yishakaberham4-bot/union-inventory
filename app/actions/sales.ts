@@ -923,3 +923,44 @@ export async function getSalesChartSummary(days = 7): Promise<{
     weekCount,
   }
 }
+
+
+/** Sales history for one product (inventory detail modal) */
+export async function getProductSalesHistory(
+  productId: string,
+  limit = 50
+): Promise<
+  {
+    id: string
+    quantity: number
+    unit_price: number
+    total_amount: number
+    sale_type: string
+    created_at: string
+    sold_by_email?: string | null
+  }[]
+> {
+  if (!productId) return []
+  const admin = getAdminClient()
+  const { data, error } = await admin
+    .from('sales')
+    .select('id, quantity, unit_price, total_amount, sale_type, created_at, sold_by_email, product_id')
+    .eq('product_id', productId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.warn('[getProductSalesHistory]', error.message)
+    return []
+  }
+
+  return (data || []).map((row) => ({
+    id: row.id as string,
+    quantity: Number(row.quantity) || 0,
+    unit_price: Number(row.unit_price) || 0,
+    total_amount: Number(row.total_amount) || 0,
+    sale_type: (row.sale_type as string) || 'cash',
+    created_at: (row.created_at as string) || '',
+    sold_by_email: (row.sold_by_email as string) || null,
+  }))
+}
