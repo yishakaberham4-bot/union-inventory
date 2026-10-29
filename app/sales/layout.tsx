@@ -30,7 +30,7 @@ export default async function SalesLayout({
   return (
     <div className="flex flex-col min-h-[100dvh] h-[100dvh] max-h-[100dvh] bg-slate-950 text-slate-100">
       {/* Mobile top bar — always visible on phone */}
-      <header className="md:hidden shrink-0 border-b border-slate-800 bg-slate-900 z-30">
+      <header className="md:hidden shrink-0 border-b border-slate-800 bg-slate-900 z-30 text-[15px]">
         <div className="px-3 py-2 flex items-center justify-between gap-2">
           <Link href="/sales/pos" className="font-semibold text-white text-sm truncate">
             Sales
