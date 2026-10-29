@@ -5,6 +5,7 @@ import { createSale } from '@/app/actions/sales'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/app/components/LanguageToggle'
 import LanguageToggle from '@/app/components/LanguageToggle'
+import { t } from '@/app/lib/i18n'
 
 type ProductOption = {
   id: string
