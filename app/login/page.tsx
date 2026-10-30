@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { loginSalesStaff } from '@/app/actions/auth'
 import Link from 'next/link'
+import { FingerprintLoginButton } from '@/app/components/BiometricAuth'
 import LanguageToggle, { useLanguage } from '@/app/components/LanguageToggle'
 import { t } from '@/app/lib/i18n'
 
@@ -105,6 +106,14 @@ export default function SalesLoginPage() {
                 {showPassword ? 'Hide' : 'Show'}
               </button>
             </div>
+          </div>
+
+          <FingerprintLoginButton staffId={staffId} role="sales" />
+
+          <div className="relative flex items-center gap-3 py-1">
+            <div className="flex-1 h-px bg-slate-800" />
+            <span className="text-[11px] text-slate-500">or password</span>
+            <div className="flex-1 h-px bg-slate-800" />
           </div>
 
           <button

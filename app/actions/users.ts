@@ -467,6 +467,9 @@ export async function addUser(
   return {
     success: true,
     message: `User ${staffId} (${fullName}) created with access: ${accessLevel}`,
+    userId,
+    staffId,
+    fullName,
   }
 }
 

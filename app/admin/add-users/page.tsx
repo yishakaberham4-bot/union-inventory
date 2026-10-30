@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { addUser } from '@/app/actions/users'
+import { RegisterFingerprintButton } from '@/app/components/BiometricAuth'
 
 const ACCESS_LEVELS = [
   { value: 'fnb', label: 'F&B' },
@@ -22,6 +23,7 @@ export default function AddUsersPage() {
   })
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [loading, setLoading] = useState(false)
+  const [created, setCreated] = useState<{ staffId: string; userId?: string; fullName?: string } | null>(null)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -36,9 +38,15 @@ export default function AddUsersPage() {
 
     if (result.success) {
       setMessage({ type: 'success', text: result.message })
+      setCreated({
+        staffId: (result as { staffId?: string }).staffId || form.id.toUpperCase(),
+        userId: (result as { userId?: string }).userId,
+        fullName: (result as { fullName?: string }).fullName || form.name,
+      })
       setForm({ id: '', name: '', phone: '', accessLevel: '', password: '' })
     } else {
       setMessage({ type: 'error', text: result.message })
+      setCreated(null)
     }
 
     setLoading(false)
@@ -168,6 +176,23 @@ export default function AddUsersPage() {
             {loading ? 'Saving…' : 'Add User'}
           </button>
         </form>
+        {created && (
+          <div className="rounded-xl border border-emerald-800/50 bg-emerald-950/30 p-4 space-y-3">
+            <p className="text-sm text-emerald-200 font-medium">
+              Register fingerprint for {created.staffId}
+            </p>
+            <p className="text-xs text-slate-400">
+              Use the employee&apos;s phone or computer (the device that has their fingerprint).
+              Password login still works as backup.
+            </p>
+            <RegisterFingerprintButton
+              staffId={created.staffId}
+              userId={created.userId}
+              displayName={created.fullName}
+            />
+          </div>
+        )}
+
 
         <div className="flex items-center justify-center gap-4 pt-1">
           <Link
