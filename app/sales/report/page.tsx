@@ -2,30 +2,22 @@ import Link from 'next/link'
 import { getSalesReport, type SaleRow } from '@/app/actions/sales'
 
 function formatMoney(n: number) {
-  return n.toFixed(2)
+  return n.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 }
 
-function formatDate(iso: string) {
+function formatTime(iso: string) {
   try {
-    return new Date(iso).toLocaleString()
-  } catch {
-    return iso
-  }
-}
-
-function formatShortDate(iso: string) {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return new Date(iso).toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
     })
   } catch {
-    return iso
+    return ''
   }
 }
-
-type Period = 'day' | 'week' | 'month' | 'all'
 
 function toYMD(d: Date): string {
   const y = d.getFullYear()
@@ -40,438 +32,197 @@ function addDays(d: Date, n: number): Date {
   return x
 }
 
-/** Monday of the week containing d (local) */
-function startOfWeek(d: Date): Date {
-  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  const day = x.getDay() // 0 Sun .. 6 Sat
-  const diff = day === 0 ? -6 : 1 - day
-  x.setDate(x.getDate() + diff)
-  return x
-}
-
-function startOfMonth(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), 1)
-}
-
-function endExclusiveForPeriod(
-  period: Period,
-  anchor: Date
-): { from: string | null; to: string | null; label: string } {
-  if (period === 'all') {
-    return { from: null, to: null, label: 'All time' }
-  }
-  if (period === 'day') {
-    const from = toYMD(anchor)
-    const to = toYMD(addDays(anchor, 1))
-    return {
-      from,
-      to,
-      label: formatShortDate(anchor.toISOString()),
-    }
-  }
-  if (period === 'week') {
-    const start = startOfWeek(anchor)
-    const end = addDays(start, 7)
-    return {
-      from: toYMD(start),
-      to: toYMD(end),
-      label: `${formatShortDate(start.toISOString())} – ${formatShortDate(addDays(start, 6).toISOString())}`,
-    }
-  }
-  // month
-  const start = startOfMonth(anchor)
-  const end = new Date(start.getFullYear(), start.getMonth() + 1, 1)
-  return {
-    from: toYMD(start),
-    to: toYMD(end),
-    label: start.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'long',
-    }),
+function labelDay(ymd: string, todayYMD: string, yesterdayYMD: string) {
+  if (ymd === todayYMD) return 'Today'
+  if (ymd === yesterdayYMD) return 'Yesterday'
+  try {
+    return new Date(ymd + 'T12:00:00').toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    })
+  } catch {
+    return ymd
   }
 }
-
-function shiftAnchor(period: Period, anchor: Date, dir: -1 | 1): Date {
-  const x = new Date(anchor)
-  if (period === 'day') {
-    x.setDate(x.getDate() + dir)
-  } else if (period === 'week') {
-    x.setDate(x.getDate() + dir * 7)
-  } else if (period === 'month') {
-    x.setMonth(x.getMonth() + dir)
-  }
-  return x
-}
-
-type SearchParams = Promise<{ period?: string; date?: string }> | { period?: string; date?: string }
 
 export default async function SalesReportPage({
   searchParams,
 }: {
-  searchParams?: SearchParams
+  searchParams: Promise<{ day?: string }>
 }) {
-  const sp = searchParams ? await Promise.resolve(searchParams) : {}
-  const periodRaw = (sp.period || 'day').toLowerCase()
-  const period: Period = ['day', 'week', 'month', 'all'].includes(periodRaw)
-    ? (periodRaw as Period)
-    : 'day'
+  const sp = await Promise.resolve(searchParams)
+  const now = new Date()
+  const todayYMD = toYMD(now)
+  const yesterdayYMD = toYMD(addDays(now, -1))
 
-  let anchor = new Date()
-  if (sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date)) {
-    const [y, m, d] = sp.date.split('-').map(Number)
-    anchor = new Date(y, m - 1, d)
-  }
-
-  const { from, to, label: periodLabel } = endExclusiveForPeriod(period, anchor)
+  // Only today or yesterday
+  const day =
+    sp.day === yesterdayYMD || sp.day === 'yesterday'
+      ? yesterdayYMD
+      : todayYMD
+  const from = day
+  const to = toYMD(addDays(new Date(day + 'T12:00:00'), 1))
 
   let sales: SaleRow[] = []
   let loadError: string | null = null
 
   try {
-    sales = await getSalesReport({
-      limit: period === 'all' ? 500 : 1000,
-      from,
-      to,
-    })
+    sales = await getSalesReport({ limit: 2000, from, to })
   } catch (e) {
-    loadError = e instanceof Error ? e.message : 'Failed to load sales report'
+    loadError = e instanceof Error ? e.message : 'Failed to load sales'
   }
 
-  const totalRevenue = sales.reduce((sum, s) => sum + s.total_amount, 0)
-  const totalQty = sales.reduce((sum, s) => sum + s.quantity, 0)
-  const totalCost = sales.reduce((sum, s) => sum + s.unit_cost * s.quantity, 0)
-  const totalProfit = totalRevenue - totalCost
-  const totalCredit = sales.reduce(
-    (sum, s) => sum + (s.credit_amount != null ? s.credit_amount : 0),
+  const totalQty = sales.reduce((s, r) => s + (Number(r.quantity) || 0), 0)
+  const totalRevenue = sales.reduce(
+    (s, r) => s + (Number(r.total_amount) || 0),
     0
   )
 
-  // Group by day for week/month views
-  const byDay = new Map<string, { sales: number; qty: number; revenue: number; profit: number }>()
-  if (period === 'week' || period === 'month') {
-    for (const s of sales) {
-      const key = s.created_at ? s.created_at.slice(0, 10) : 'unknown'
-      const cur = byDay.get(key) || { sales: 0, qty: 0, revenue: 0, profit: 0 }
-      cur.sales += 1
-      cur.qty += s.quantity
-      cur.revenue += s.total_amount
-      cur.profit += s.total_amount - s.unit_cost * s.quantity
-      byDay.set(key, cur)
-    }
-  }
-  const dayRows = Array.from(byDay.entries()).sort((a, b) => b[0].localeCompare(a[0]))
-
-  const prevDate = toYMD(shiftAnchor(period, anchor, -1))
-  const nextDate = toYMD(shiftAnchor(period, anchor, 1))
-  const todayYMD = toYMD(new Date())
-
-  function periodHref(p: Period, date?: string) {
-    const q = new URLSearchParams()
-    q.set('period', p)
-    if (p !== 'all' && date) q.set('date', date)
-    return `/sales/report?${q.toString()}`
-  }
-
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Sales Report</h1>
-          <p className="text-sm text-slate-400 mt-1">
-            View by day, week or month
-          </p>
+    <div className="flex-1 min-h-0 overflow-y-auto w-full">
+      <div className="max-w-3xl mx-auto p-3 sm:p-6 space-y-4 pb-[max(2rem,env(safe-area-inset-bottom))]">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <Link
+              href="/sales/pos"
+              className="text-xs text-slate-500 hover:text-slate-300"
+            >
+              ← Sales Terminal
+            </Link>
+            <h1 className="text-xl font-bold text-white mt-1">Sales report</h1>
+            <p className="text-slate-400 text-sm">
+              {labelDay(day, todayYMD, yesterdayYMD)} · product, qty & price
+            </p>
+          </div>
         </div>
+
+        {/* Today / Yesterday only */}
         <div className="flex gap-2">
           <Link
-            href="/sales/make"
-            className="text-sm px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white transition"
-          >
-            + Make Sale
-          </Link>
-          <Link
-            href="/sales/pos"
-            className="text-sm px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
-          >
-            ← Back
-          </Link>
-        </div>
-      </div>
-
-      {/* Period tabs */}
-      <div className="flex flex-wrap items-center gap-2">
-        {(
-          [
-            { id: 'day' as const, label: 'By day' },
-            { id: 'week' as const, label: 'By week' },
-            { id: 'month' as const, label: 'By month' },
-            { id: 'all' as const, label: 'All' },
-          ] as const
-        ).map((t) => (
-          <Link
-            key={t.id}
-            href={periodHref(t.id, t.id === 'all' ? undefined : toYMD(anchor))}
-            className={`px-4 py-2 rounded-xl text-sm font-medium border transition ${
-              period === t.id
-                ? 'bg-emerald-700 border-emerald-500 text-white'
-                : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500'
+            href={`/sales/report?day=${todayYMD}`}
+            className={`flex-1 text-center py-2.5 rounded-xl text-sm font-semibold transition border ${
+              day === todayYMD
+                ? 'bg-emerald-600 border-emerald-500 text-white'
+                : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
             }`}
           >
-            {t.label}
+            Today
           </Link>
-        ))}
-      </div>
-
-      {/* Date navigation */}
-      {period !== 'all' && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
           <Link
-            href={periodHref(period, prevDate)}
-            className="text-sm px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
+            href={`/sales/report?day=${yesterdayYMD}`}
+            className={`flex-1 text-center py-2.5 rounded-xl text-sm font-semibold transition border ${
+              day === yesterdayYMD
+                ? 'bg-emerald-600 border-emerald-500 text-white'
+                : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+            }`}
           >
-            ← Prev
+            Yesterday
           </Link>
-          <div className="text-center">
-            <p className="text-white font-semibold">{periodLabel}</p>
-            <p className="text-xs text-slate-500 mt-0.5 capitalize">{period}</p>
+        </div>
+
+        {/* Simple totals — no profit / cost */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+            <p className="text-xs text-slate-500 uppercase">Items sold</p>
+            <p className="text-xl font-semibold text-white mt-1 tabular-nums">
+              {totalQty}
+            </p>
           </div>
-          <div className="flex gap-2">
-            {toYMD(anchor) !== todayYMD && (
-              <Link
-                href={periodHref(period, todayYMD)}
-                className="text-sm px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
-              >
-                Today
-              </Link>
-            )}
-            <Link
-              href={periodHref(period, nextDate)}
-              className="text-sm px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
-            >
-              Next →
-            </Link>
+          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+            <p className="text-xs text-slate-500 uppercase">Total sales</p>
+            <p className="text-xl font-semibold text-emerald-400 mt-1 tabular-nums">
+              {formatMoney(totalRevenue)}
+            </p>
           </div>
         </div>
-      )}
 
-      {loadError ? (
-        <div className="rounded-2xl border border-red-800/50 bg-red-950/40 p-5 text-red-200 text-sm space-y-2">
-          <p className="font-medium">Unable to load report</p>
-          <p className="text-red-300/90 text-xs">{loadError}</p>
-          <p className="text-red-300/70 text-xs">
-            Please try again or contact your system administrator.
-          </p>
-        </div>
-      ) : (
-        <>
-          {/* Summary cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-              <p className="text-xs text-slate-500 uppercase">Sales</p>
-              <p className="text-xl font-semibold text-white mt-1">{sales.length}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-              <p className="text-xs text-slate-500 uppercase">Items sold</p>
-              <p className="text-xl font-semibold text-white mt-1">{totalQty}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-              <p className="text-xs text-slate-500 uppercase">Revenue</p>
-              <p className="text-xl font-semibold text-emerald-400 mt-1">
-                {formatMoney(totalRevenue)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-              <p className="text-xs text-slate-500 uppercase">Est. profit</p>
-              <p className="text-xl font-semibold text-sky-300 mt-1">
-                {formatMoney(totalProfit)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-              <p className="text-xs text-slate-500 uppercase">On credit</p>
-              <p className="text-xl font-semibold text-amber-300 mt-1">
-                {formatMoney(totalCredit)}
-              </p>
-            </div>
+        {loadError ? (
+          <div className="rounded-2xl border border-red-800/50 bg-red-950/40 p-5 text-red-200 text-sm">
+            <p className="font-medium">Unable to load report</p>
+            <p className="text-red-300/90 text-xs mt-1">{loadError}</p>
           </div>
-
-          {/* Daily breakdown for week / month */}
-          {(period === 'week' || period === 'month') && dayRows.length > 0 && (
-            <div className="rounded-2xl border border-slate-800 overflow-hidden">
-              <div className="px-4 py-3 bg-slate-900 border-b border-slate-800">
-                <h2 className="text-sm font-medium text-slate-300">
-                  Daily breakdown
-                </h2>
-              </div>
-              {/* Mobile cards */}
-              <div className="md:hidden divide-y divide-slate-800">
-                {dayRows.map(([day, row]) => (
-                  <Link
-                    key={day}
-                    href={periodHref('day', day)}
-                    className="block px-4 py-3 hover:bg-slate-900/80 active:bg-slate-900"
-                  >
-                    <div className="flex justify-between gap-2 items-start">
-                      <span className="text-emerald-400 font-medium text-sm">
-                        {formatShortDate(day + 'T12:00:00')}
-                      </span>
-                      <span className="text-emerald-400 font-semibold tabular-nums text-sm">
-                        {formatMoney(row.revenue)}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-400">
-                      <span>{row.sales} sales</span>
-                      <span>{row.qty} items</span>
-                      <span className="text-sky-300">Profit {formatMoney(row.profit)}</span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-              {/* Desktop table */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
-                    <tr>
-                      <th className="px-4 py-2 font-medium">Date</th>
-                      <th className="px-4 py-2 font-medium">Sales</th>
-                      <th className="px-4 py-2 font-medium">Items</th>
-                      <th className="px-4 py-2 font-medium">Revenue</th>
-                      <th className="px-4 py-2 font-medium">Profit</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/80">
-                    {dayRows.map(([day, row]) => (
-                      <tr key={day} className="bg-slate-950/50 hover:bg-slate-900/80">
-                        <td className="px-4 py-2.5">
-                          <Link
-                            href={periodHref('day', day)}
-                            className="text-emerald-400 hover:underline"
-                          >
-                            {formatShortDate(day + 'T12:00:00')}
-                          </Link>
-                        </td>
-                        <td className="px-4 py-2.5 text-white">{row.sales}</td>
-                        <td className="px-4 py-2.5 text-slate-300">{row.qty}</td>
-                        <td className="px-4 py-2.5 text-emerald-400 font-medium">
-                          {formatMoney(row.revenue)}
-                        </td>
-                        <td className="px-4 py-2.5 text-sky-300">
-                          {formatMoney(row.profit)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+        ) : sales.length === 0 ? (
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-10 text-center text-slate-500 text-sm">
+            No sales {day === todayYMD ? 'today' : 'yesterday'}.
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-slate-800 overflow-hidden">
+            <div className="px-4 py-3 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
+              <h2 className="text-sm font-medium text-slate-300">Sold products</h2>
+              <span className="text-xs text-slate-500">{sales.length} lines</span>
             </div>
-          )}
 
-          {sales.length === 0 ? (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-10 text-center text-slate-500">
-              No sales in this period.
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-slate-800 overflow-hidden">
-              <div className="px-4 py-3 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
-                <h2 className="text-sm font-medium text-slate-300">
-                  Sale details
-                </h2>
-                <span className="text-xs text-slate-500">{sales.length} records</span>
-              </div>
-              
-              <div className="md:hidden divide-y divide-slate-800">
-                {sales.map((s) => (
-                  <div key={s.id} className="px-4 py-3 space-y-1.5">
-                    <div className="flex justify-between gap-2 items-start">
-                      <div className="min-w-0">
-                        <p className="text-white font-medium text-sm leading-snug truncate">
-                          {s.product_name}
-                        </p>
-                        <p className="text-xs text-slate-500">{s.product_sku}</p>
-                      </div>
-                      <p className="text-emerald-400 font-semibold tabular-nums text-sm shrink-0">
-                        {formatMoney(s.total_amount)}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-400">
-                      <span>{formatDate(s.created_at)}</span>
-                      <span>Qty {s.quantity}</span>
-                      <span>@ {formatMoney(s.unit_price)}</span>
-                      <span>
-                        {s.sale_type?.startsWith('mb:')
-                          ? `MB · ${s.sale_type.slice(3)}`
-                          : s.sale_type || 'cash'}
-                      </span>
-                    </div>
+            {/* Mobile cards */}
+            <div className="md:hidden divide-y divide-slate-800">
+              {sales.map((s) => (
+                <div key={s.id} className="px-4 py-3 flex justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-white font-medium text-sm truncate">
+                      {s.product_name}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {formatTime(s.created_at)}
+                    </p>
                   </div>
-                ))}
-              </div>
-<div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
-                    <tr>
-                      <th className="px-4 py-3 font-medium">Date</th>
-                      <th className="px-4 py-3 font-medium">Product</th>
-                      <th className="px-4 py-3 font-medium">Qty</th>
-                      <th className="px-4 py-3 font-medium">Unit price</th>
-                      <th className="px-4 py-3 font-medium">Total</th>
-                      <th className="px-4 py-3 font-medium">Type</th>
-                      <th className="px-4 py-3 font-medium">Staff</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/80">
-                    {sales.map((s) => (
-                      <tr key={s.id} className="bg-slate-950/50 hover:bg-slate-900/80">
-                        <td className="px-4 py-3 text-slate-400 whitespace-nowrap">
-                          {formatDate(s.created_at)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="text-white font-medium">{s.product_name}</div>
-                          <div className="text-xs text-slate-500">{s.product_sku}</div>
-                        </td>
-                        <td className="px-4 py-3 text-white">{s.quantity}</td>
-                        <td className="px-4 py-3 text-slate-300">
-                          {formatMoney(s.unit_price)}
-                        </td>
-                        <td className="px-4 py-3 text-emerald-400 font-medium">
-                          {formatMoney(s.total_amount)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-block px-2 py-0.5 rounded-md text-xs ${
-                              s.sale_type?.startsWith('credit')
-                                ? 'bg-amber-900/60 text-amber-200'
-                                : 'bg-slate-800 text-slate-300'
-                            }`}
-                          >
-                            {s.sale_type?.startsWith('mb:')
-                              ? `MB · ${s.sale_type.slice(3)}`
-                              : s.sale_type?.startsWith('credit:full')
-                                ? 'Credit (full)'
-                                : s.sale_type?.startsWith('credit:two')
-                                  ? `Credit (half) · paid via ${s.sale_type.split(':').slice(2).join(':')}`
-                                  : s.sale_type}
-                          </span>
-                          {s.credit_customer_name && (
-                            <div className="text-xs text-amber-300/80 mt-1">
-                              {s.credit_customer_name}
-                              {s.credit_phone ? ` · ${s.credit_phone}` : ''}
-                              {s.credit_amount != null
-                                ? ` · credit ${formatMoney(s.credit_amount)}`
-                                : ''}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-slate-400 text-xs">
-                          {s.sold_by_email || '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-white text-sm tabular-nums">
+                      × {s.quantity}
+                    </p>
+                    <p className="text-emerald-400 font-semibold text-sm tabular-nums">
+                      {formatMoney(s.total_amount)}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-          )}
-        </>
-      )}
+
+            {/* Desktop table — name, qty, price only */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Product</th>
+                    <th className="px-4 py-3 font-medium text-right">Qty</th>
+                    <th className="px-4 py-3 font-medium text-right">Price</th>
+                    <th className="px-4 py-3 font-medium text-slate-500">Time</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/80">
+                  {sales.map((s) => (
+                    <tr key={s.id} className="bg-slate-950/50 hover:bg-slate-900/80">
+                      <td className="px-4 py-3 text-white font-medium">
+                        {s.product_name}
+                      </td>
+                      <td className="px-4 py-3 text-right text-white tabular-nums">
+                        {s.quantity}
+                      </td>
+                      <td className="px-4 py-3 text-right text-emerald-400 font-medium tabular-nums">
+                        {formatMoney(s.total_amount)}
+                      </td>
+                      <td className="px-4 py-3 text-slate-500 text-xs">
+                        {formatTime(s.created_at)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-slate-900/90 border-t border-slate-700">
+                  <tr>
+                    <td className="px-4 py-3 text-slate-300 font-semibold">Total</td>
+                    <td className="px-4 py-3 text-right text-white font-semibold tabular-nums">
+                      {totalQty}
+                    </td>
+                    <td className="px-4 py-3 text-right text-emerald-400 font-semibold tabular-nums">
+                      {formatMoney(totalRevenue)}
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
