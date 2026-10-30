@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Subtle selection */
+::selection {
+  background: rgb(16 185 129 / 0.35);
+  color: #fff;
+}
+
+/* Smooth focus rings for forms */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 2px solid rgb(16 185 129 / 0.45);
+  outline-offset: 2px;
+}
+
+/* Hide scrollbars on horizontal chip rows (mobile POS) */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Better mobile tap targets */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+
+/* Smooth one-finger scrolling inside POS panels */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+}
+
+
+/* iPhone notch / status bar */
+.safe-top {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
