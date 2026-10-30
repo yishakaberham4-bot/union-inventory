@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { logoutSales } from '@/app/actions/auth'
 import { useLanguage } from '@/app/components/LanguageToggle'
 import LanguageToggle from '@/app/components/LanguageToggle'
@@ -8,6 +9,13 @@ import { t } from '@/app/lib/i18n'
 
 export function SalesMobileBar({ staffLabel }: { staffLabel: string }) {
   const lang = useLanguage()
+  const pathname = usePathname()
+
+  // Make Sale has its own full-screen Telegram-style header — avoid double chrome
+  if (pathname?.startsWith('/sales/make')) {
+    return null
+  }
+
   return (
     <header className="md:hidden shrink-0 border-b border-slate-800 bg-slate-900 z-30 text-[15px]">
       <div className="px-3 py-2 flex items-center justify-between gap-2">
