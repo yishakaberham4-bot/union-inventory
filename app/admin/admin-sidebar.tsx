@@ -4,43 +4,43 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { logoutAdmin } from '@/app/actions/auth'
+import { useLanguage } from '@/app/components/LanguageToggle'
+import LanguageToggle from '@/app/components/LanguageToggle'
+import { t, type TranslationKey } from '@/app/lib/i18n'
 
-type NavChild = { href: string; label: string }
-type NavItem = {
+const navItems: {
   href: string
-  label: string
+  labelKey: TranslationKey
   icon: string
-  children?: NavChild[]
-}
-
-const navItems: NavItem[] = [
-  { href: '/admin', label: 'Dashboard', icon: '🏠' },
-  { href: '/admin/profile', label: 'Profile', icon: '👤' },
-  { href: '/admin/users', label: 'Users', icon: '👥' },
+  children?: { href: string; labelKey: TranslationKey }[]
+}[] = [
+  { href: '/admin', labelKey: 'dashboard', icon: '🏠' },
+  { href: '/admin/profile', labelKey: 'profile', icon: '👤' },
+  { href: '/admin/users', labelKey: 'users', icon: '👥' },
   {
     href: '/admin/inventory',
-    label: 'Inventory Control',
+    labelKey: 'inventory',
     icon: '📦',
     children: [
-      { href: '/admin/inventory', label: 'All products' },
-      { href: '/admin/inventory/new', label: 'Add new products' },
-      { href: '/admin/inventory/stock', label: 'Adjust stock levels' },
-      { href: '/admin/inventory/pricing', label: 'Update pricing' },
-      { href: '/admin/inventory/alerts', label: 'Low stock alerts' },
+      { href: '/admin/inventory', labelKey: 'allProducts' },
+      { href: '/admin/inventory/new', labelKey: 'addNewProducts' },
+      { href: '/admin/inventory/stock', labelKey: 'adjustStock' },
+      { href: '/admin/inventory/pricing', labelKey: 'updatePricing' },
+      { href: '/admin/inventory/alerts', labelKey: 'lowStockAlerts' },
     ],
   },
   {
     href: '/admin/sales',
-    label: 'Sales & Analysis',
+    labelKey: 'sales',
     icon: '📊',
     children: [
-      { href: '/admin/sales', label: 'Sales overview' },
-      { href: '/admin/sales/report', label: 'General report' },
-      { href: '/admin/sales/profit', label: 'Profit report' },
-      { href: '/admin/sales/credit', label: 'Credit report' },
-      { href: '/admin/sales/debit', label: 'Debit' },
-      { href: '/admin/sales/transactions', label: 'Transaction report' },
-      { href: '/admin/sales/graphics', label: 'Graphic report' },
+      { href: '/admin/sales', labelKey: 'salesOverview' },
+      { href: '/admin/sales/report', labelKey: 'generalReport' },
+      { href: '/admin/sales/profit', labelKey: 'profitReport' },
+      { href: '/admin/sales/credit', labelKey: 'creditReport' },
+      { href: '/admin/sales/debit', labelKey: 'debit' },
+      { href: '/admin/sales/transactions', labelKey: 'transactionReport' },
+      { href: '/admin/sales/graphics', labelKey: 'graphicReport' },
     ],
   },
 ]
@@ -75,6 +75,7 @@ export default function AdminSidebar({
   unreadCount?: number
 }) {
   const pathname = usePathname()
+  const lang = useLanguage()
   const [open, setOpen] = useState(false)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
@@ -183,9 +184,10 @@ export default function AdminSidebar({
               className="font-semibold text-white hover:text-purple-300"
               onClick={() => setOpen(false)}
             >
-              🛡️ Admin Terminal
+              {t(lang, 'adminTerminal')}
             </Link>
             <p className="text-xs text-slate-500 mt-0.5">{staffLabel}</p>
+            <div className="mt-2"><LanguageToggle /></div>
           </div>
           <button
             type="button"
@@ -206,7 +208,7 @@ export default function AdminSidebar({
             if (!hasChildren) {
               return (
                 <Link
-                  key={item.href + item.label}
+                  key={item.href + item.labelKey}
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition ${
@@ -216,13 +218,13 @@ export default function AdminSidebar({
                   }`}
                 >
                   <span className="text-base">{item.icon}</span>
-                  <span className="font-medium">{item.label}</span>
+                  <span className="font-medium">{t(lang, item.labelKey)}</span>
                 </Link>
               )
             }
 
             return (
-              <div key={item.href + item.label} className="space-y-0.5">
+              <div key={item.href + item.labelKey} className="space-y-0.5">
                 <div className="flex items-stretch gap-1">
                   <Link
                     href={item.href}
@@ -234,7 +236,7 @@ export default function AdminSidebar({
                     }`}
                   >
                     <span className="text-base shrink-0">{item.icon}</span>
-                    <span className="font-medium truncate">{item.label}</span>
+                    <span className="font-medium truncate">{t(lang, item.labelKey)}</span>
                   </Link>
                   <button
                     type="button"
@@ -270,7 +272,7 @@ export default function AdminSidebar({
                               : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
                           }`}
                         >
-                          {child.label}
+                          {t(lang, child.labelKey)}
                         </Link>
                       )
                     })}
@@ -291,7 +293,7 @@ export default function AdminSidebar({
             }`}
           >
             <span className="text-base">🔔</span>
-            <span className="font-medium">Notifications</span>
+            <span className="font-medium">{t(lang, 'notifications')}</span>
             {unreadCount > 0 && (
               <span className="ml-auto text-[11px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full">
                 {unreadCount > 99 ? '99+' : unreadCount}
@@ -306,7 +308,7 @@ export default function AdminSidebar({
               type="submit"
               className="w-full text-sm px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
             >
-              Log out
+              {t(lang, 'logout')}
             </button>
           </form>
         </div>

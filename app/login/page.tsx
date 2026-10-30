@@ -3,8 +3,11 @@
 import { useState } from 'react'
 import { loginSalesStaff } from '@/app/actions/auth'
 import Link from 'next/link'
+import LanguageToggle, { useLanguage } from '@/app/components/LanguageToggle'
+import { t } from '@/app/lib/i18n'
 
 export default function SalesLoginPage() {
+  const lang = useLanguage()
   const [staffId, setStaffId] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)

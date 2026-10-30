@@ -604,8 +604,8 @@ export default function MakeSaleForm({
   if (products.length === 0) {
     return (
       <div className="rounded-2xl border border-amber-800/50 bg-amber-950/30 p-6 text-center text-amber-200 mx-2">
-        No products available for sale (all out of stock or inactive).
-        Ask admin to add stock in Inventory Control.
+{t(lang, 'noProductsSale')}{' '}
+        {t(lang, 'askAdminStock')}
       </div>
     )
   }

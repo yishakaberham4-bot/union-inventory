@@ -1,11 +1,21 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { LANG_STORAGE_KEY, type Lang } from '@/app/lib/i18n'
+import { LANG_COOKIE, LANG_STORAGE_KEY, type Lang } from '@/app/lib/i18n'
 
 type Props = {
   onChange?: (lang: Lang) => void
   className?: string
+}
+
+function persist(lang: Lang) {
+  try {
+    localStorage.setItem(LANG_STORAGE_KEY, lang)
+  } catch {}
+  try {
+    document.cookie = `${LANG_COOKIE}=${lang};path=/;max-age=31536000;SameSite=Lax`
+  } catch {}
+  document.documentElement.lang = lang === 'am' ? 'am' : 'en'
 }
 
 export default function LanguageToggle({ onChange, className = '' }: Props) {
@@ -17,13 +27,12 @@ export default function LanguageToggle({ onChange, className = '' }: Props) {
     const saved = (localStorage.getItem(LANG_STORAGE_KEY) as Lang) || 'en'
     const valid: Lang = saved === 'am' ? 'am' : 'en'
     setLang(valid)
-    document.documentElement.lang = valid === 'am' ? 'am' : 'en'
+    persist(valid)
   }, [])
 
   const apply = (next: Lang) => {
     setLang(next)
-    localStorage.setItem(LANG_STORAGE_KEY, next)
-    document.documentElement.lang = next === 'am' ? 'am' : 'en'
+    persist(next)
     onChange?.(next)
     window.dispatchEvent(new CustomEvent('language-change', { detail: next }))
   }
