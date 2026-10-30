@@ -301,7 +301,32 @@ export default async function SalesReportPage({
                   Daily breakdown
                 </h2>
               </div>
-              <div className="overflow-x-auto">
+              {/* Mobile cards */}
+              <div className="md:hidden divide-y divide-slate-800">
+                {dayRows.map(([day, row]) => (
+                  <Link
+                    key={day}
+                    href={periodHref('day', day)}
+                    className="block px-4 py-3 hover:bg-slate-900/80 active:bg-slate-900"
+                  >
+                    <div className="flex justify-between gap-2 items-start">
+                      <span className="text-emerald-400 font-medium text-sm">
+                        {formatShortDate(day + 'T12:00:00')}
+                      </span>
+                      <span className="text-emerald-400 font-semibold tabular-nums text-sm">
+                        {formatMoney(row.revenue)}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-400">
+                      <span>{row.sales} sales</span>
+                      <span>{row.qty} items</span>
+                      <span className="text-sky-300">Profit {formatMoney(row.profit)}</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
                     <tr>
@@ -351,7 +376,35 @@ export default async function SalesReportPage({
                 </h2>
                 <span className="text-xs text-slate-500">{sales.length} records</span>
               </div>
-              <div className="overflow-x-auto">
+              
+              <div className="md:hidden divide-y divide-slate-800">
+                {sales.map((s) => (
+                  <div key={s.id} className="px-4 py-3 space-y-1.5">
+                    <div className="flex justify-between gap-2 items-start">
+                      <div className="min-w-0">
+                        <p className="text-white font-medium text-sm leading-snug truncate">
+                          {s.product_name}
+                        </p>
+                        <p className="text-xs text-slate-500">{s.product_sku}</p>
+                      </div>
+                      <p className="text-emerald-400 font-semibold tabular-nums text-sm shrink-0">
+                        {formatMoney(s.total_amount)}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-400">
+                      <span>{formatDate(s.created_at)}</span>
+                      <span>Qty {s.quantity}</span>
+                      <span>@ {formatMoney(s.unit_price)}</span>
+                      <span>
+                        {s.sale_type?.startsWith('mb:')
+                          ? `MB · ${s.sale_type.slice(3)}`
+                          : s.sale_type || 'cash'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+<div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
                     <tr>

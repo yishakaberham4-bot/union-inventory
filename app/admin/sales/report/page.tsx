@@ -168,44 +168,44 @@ export default async function AdminGeneralReportPage({
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-800 overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="rounded-xl border border-slate-800 overflow-x-auto max-w-full -mx-2 sm:mx-0">
+            <table className="w-full text-sm min-w-[640px] md:min-w-0">
               <thead className="bg-slate-900/80 text-slate-400 text-left">
                 <tr>
-                  <th className="px-3 py-2 font-medium">Returned at</th>
-                  <th className="px-3 py-2 font-medium">Original sale</th>
-                  <th className="px-3 py-2 font-medium">Product</th>
-                  <th className="px-3 py-2 font-medium text-right">Qty</th>
-                  <th className="px-3 py-2 font-medium text-right">Total</th>
-                  <th className="px-3 py-2 font-medium">Type</th>
-                  <th className="px-3 py-2 font-medium">Reason</th>
+                  <th className="px-2 sm:px-3 py-2 font-medium">Returned at</th>
+                  <th className="px-2 sm:px-3 py-2 font-medium">Original sale</th>
+                  <th className="px-2 sm:px-3 py-2 font-medium">Product</th>
+                  <th className="px-2 sm:px-3 py-2 font-medium text-right">Qty</th>
+                  <th className="px-2 sm:px-3 py-2 font-medium text-right">Total</th>
+                  <th className="px-2 sm:px-3 py-2 font-medium">Type</th>
+                  <th className="px-2 sm:px-3 py-2 font-medium">Reason</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80">
                 {returns.map((r) => (
                   <tr key={r.id} className="hover:bg-slate-900/40">
-                    <td className="px-3 py-2 text-slate-400 whitespace-nowrap text-xs">
+                    <td className="px-2 sm:px-3 py-2 text-slate-400 whitespace-nowrap text-xs">
                       {r.returned_at ? formatDate(r.returned_at) : '—'}
                     </td>
-                    <td className="px-3 py-2 text-slate-500 text-xs whitespace-nowrap">
+                    <td className="px-2 sm:px-3 py-2 text-slate-500 text-xs whitespace-nowrap">
                       {r.original_created_at ? formatDate(r.original_created_at) : '—'}
                     </td>
-                    <td className="px-3 py-2 text-white">
+                    <td className="px-2 sm:px-3 py-2 text-white">
                       {r.product_name}
                       {r.product_sku && (
                         <span className="text-slate-500 text-xs ml-1">{r.product_sku}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-right text-orange-300">{r.quantity}</td>
-                    <td className="px-3 py-2 text-right text-orange-300 font-medium">
+                    <td className="px-2 sm:px-3 py-2 text-right text-orange-300">{r.quantity}</td>
+                    <td className="px-2 sm:px-3 py-2 text-right text-orange-300 font-medium">
                       {formatMoney(r.total_amount)}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-2 sm:px-3 py-2">
                       <span className="inline-block px-1.5 py-0.5 rounded text-xs bg-slate-800 text-slate-300">
                         {r.sale_type || 'cash'}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-slate-400 text-xs max-w-[160px] truncate">
+                    <td className="px-2 sm:px-3 py-2 text-slate-400 text-xs max-w-[160px] truncate">
                       {r.reason || '—'}
                     </td>
                   </tr>
@@ -266,40 +266,40 @@ export default async function AdminGeneralReportPage({
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-800 overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="rounded-xl border border-slate-800 overflow-x-auto max-w-full -mx-2 sm:mx-0">
+            <table className="w-full text-sm min-w-[640px] md:min-w-0">
               <thead className="bg-slate-900/80 text-slate-400 text-left">
                 <tr>
-                  <th className="px-3 py-2 font-medium">Date</th>
-                  <th className="px-3 py-2 font-medium">Product</th>
-                  <th className="px-3 py-2 font-medium text-right">Qty</th>
-                  <th className="px-3 py-2 font-medium text-right">Unit</th>
-                  <th className="px-3 py-2 font-medium text-right">Total</th>
-                  <th className="px-3 py-2 font-medium">Type</th>
-                  <th className="px-3 py-2 font-medium">Sold by</th>
-                  <th className="px-3 py-2 font-medium text-right">Action</th>
+                  <th className="px-2 sm:px-3 py-2 font-medium">Date</th>
+                  <th className="px-2 sm:px-3 py-2 font-medium">Product</th>
+                  <th className="px-2 sm:px-3 py-2 font-medium text-right">Qty</th>
+                  <th className="px-2 sm:px-3 py-2 font-medium text-right">Unit</th>
+                  <th className="px-2 sm:px-3 py-2 font-medium text-right">Total</th>
+                  <th className="px-2 sm:px-3 py-2 font-medium">Type</th>
+                  <th className="px-2 sm:px-3 py-2 font-medium">Sold by</th>
+                  <th className="px-2 sm:px-3 py-2 font-medium text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80">
                 {sales.map((s) => (
                   <tr key={s.id} className="hover:bg-slate-900/40">
-                    <td className="px-3 py-2 text-slate-400 whitespace-nowrap text-xs">
+                    <td className="px-2 sm:px-3 py-2 text-slate-400 whitespace-nowrap text-xs">
                       {s.created_at ? formatDate(s.created_at) : '—'}
                     </td>
-                    <td className="px-3 py-2 text-white">
+                    <td className="px-2 sm:px-3 py-2 text-white">
                       {s.product_name}
                       {s.product_sku && (
                         <span className="text-slate-500 text-xs ml-1">{s.product_sku}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-right">{s.quantity}</td>
-                    <td className="px-3 py-2 text-right text-slate-400">
+                    <td className="px-2 sm:px-3 py-2 text-right">{s.quantity}</td>
+                    <td className="px-2 sm:px-3 py-2 text-right text-slate-400">
                       {formatMoney(s.unit_price)}
                     </td>
-                    <td className="px-3 py-2 text-right text-emerald-400 font-medium">
+                    <td className="px-2 sm:px-3 py-2 text-right text-emerald-400 font-medium">
                       {formatMoney(s.total_amount)}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-2 sm:px-3 py-2">
                       <span
                         className={`inline-block px-1.5 py-0.5 rounded text-xs ${
                           (s.sale_type || '').startsWith('credit')
@@ -310,10 +310,10 @@ export default async function AdminGeneralReportPage({
                         {s.sale_type || 'cash'}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-slate-400 text-xs">
+                    <td className="px-2 sm:px-3 py-2 text-slate-400 text-xs">
                       {s.sold_by_email || s.sold_by || '—'}
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-2 sm:px-3 py-2 text-right">
                       <ReturnSaleButton
                         saleId={s.id}
                         productName={s.product_name}
@@ -355,4 +355,48 @@ export default async function AdminGeneralReportPage({
       )}
     </div>
   )
+
+          {/* Mobile-friendly cards */}
+          <div className="md:hidden space-y-2">
+            {sales.map((s) => (
+              <div
+                key={s.id}
+                className="rounded-xl border border-slate-800 bg-slate-900/50 p-3 space-y-2"
+              >
+                <div className="flex justify-between gap-2 items-start">
+                  <div className="min-w-0">
+                    <p className="text-white font-medium text-sm truncate">{s.product_name}</p>
+                    <p className="text-xs text-slate-500">{s.product_sku}</p>
+                  </div>
+                  <p className="text-emerald-400 font-semibold tabular-nums text-sm shrink-0">
+                    {formatMoney(s.total_amount)}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-400">
+                  <span>{formatDate(s.created_at)}</span>
+                  <span>Qty {s.quantity}</span>
+                  <span>@ {formatMoney(s.unit_price)}</span>
+                  <span>{s.sale_type || 'cash'}</span>
+                </div>
+                <div className="flex justify-between items-center gap-2 pt-1">
+                  <span className="text-xs text-slate-500 truncate">
+                    {s.sold_by_email || s.sold_by || '—'}
+                  </span>
+                  <ReturnSaleButton
+                    saleId={s.id}
+                    productName={s.product_name}
+                    quantity={s.quantity}
+                  />
+                </div>
+              </div>
+            ))}
+            {sales.length === 0 && !error && (
+              <p className="text-center text-slate-500 py-8 text-sm">
+                {hasRange
+                  ? 'No sales for this date range and filters.'
+                  : 'Choose a date range above and click Generate report.'}
+              </p>
+            )}
+          </div>
+
 }
