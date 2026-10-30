@@ -90,7 +90,7 @@ export default async function AdminCreditReportPage({
   )
 
   return (
-    <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6">
+    <div className="p-3 sm:p-6 md:p-8 max-w-6xl mx-auto space-y-5 sm:space-y-6 min-w-0">
       <div>
         <Link href="/admin/sales" className="text-xs text-slate-500 hover:text-slate-300">
           ← Sales & Analysis
@@ -139,7 +139,39 @@ export default async function AdminCreditReportPage({
         <h2 className="text-sm font-medium text-slate-400 mb-2 uppercase tracking-wide">
           By customer
         </h2>
-        <div className="rounded-xl border border-slate-800 overflow-hidden mb-6">
+        {/* Mobile cards */}
+        <div className="md:hidden space-y-2 mb-6">
+          {customers.map((c) => (
+            <div
+              key={c.name + c.phone}
+              className="rounded-xl border border-slate-800 bg-slate-900/50 p-3 space-y-2"
+            >
+              <div className="flex justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-white font-medium text-sm truncate">{c.name}</p>
+                  <p className="text-xs text-slate-500">{c.phone || '—'}</p>
+                </div>
+                <p className="text-red-300 font-semibold tabular-nums text-sm shrink-0">
+                  {formatMoney(c.credit - c.paid)}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-400">
+                <span>{c.count} sales</span>
+                <span className="text-amber-300">Credit {formatMoney(c.credit)}</span>
+                <span className="text-emerald-400">Paid {formatMoney(c.paid)}</span>
+              </div>
+            </div>
+          ))}
+          {customers.length === 0 && !error && (
+            <p className="text-center text-slate-500 py-8 text-sm">
+              {hasRange
+                ? 'No credit customers in this range.'
+                : 'Choose a date range and click Generate report.'}
+            </p>
+          )}
+        </div>
+        {/* Desktop table */}
+        <div className="hidden md:block rounded-xl border border-slate-800 overflow-x-auto mb-6">
           <table className="w-full text-sm">
             <thead className="bg-slate-900/80 text-slate-400 text-left">
               <tr>
@@ -182,7 +214,59 @@ export default async function AdminCreditReportPage({
         <h2 className="text-sm font-medium text-slate-400 mb-2 uppercase tracking-wide">
           Credit transactions
         </h2>
-        <div className="rounded-xl border border-slate-800 overflow-hidden">
+        
+        <div className="md:hidden space-y-2">
+          {creditSales.map((s) => {
+            const creditAmt =
+              s.credit_amount != null ? s.credit_amount : s.total_amount || 0
+            const paid = s.paid_amount || 0
+            const outstanding = Math.max(0, creditAmt - paid)
+            return (
+              <div
+                key={s.id}
+                className="rounded-xl border border-slate-800 bg-slate-900/50 p-3 space-y-2"
+              >
+                <div className="flex justify-between gap-2 items-start">
+                  <div className="min-w-0">
+                    <p className="text-white font-medium text-sm truncate">
+                      {s.credit_customer_name || '—'}
+                    </p>
+                    <p className="text-xs text-slate-500">{s.credit_phone || ''}</p>
+                    <p className="text-sm text-slate-300 mt-1 truncate">{s.product_name}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-amber-300 font-semibold tabular-nums text-sm">
+                      {formatMoney(creditAmt)}
+                    </p>
+                    <p className="text-[11px] text-slate-500">credit</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-400">
+                  <span>{s.created_at ? formatDate(s.created_at) : '—'}</span>
+                  <span>Total {formatMoney(s.total_amount)}</span>
+                  <span className="text-emerald-400">Paid {formatMoney(paid)}</span>
+                  <span className="text-red-300">Due {formatMoney(outstanding)}</span>
+                  <span className="text-amber-200/80">{s.sale_type}</span>
+                </div>
+                <div className="flex justify-end pt-1">
+                  <PayCreditButton
+                    saleId={s.id}
+                    productName={s.product_name}
+                    outstanding={outstanding}
+                  />
+                </div>
+              </div>
+            )
+          })}
+          {creditSales.length === 0 && !error && (
+            <p className="text-center text-slate-500 py-8 text-sm">
+              {hasRange
+                ? 'No credit sales in this range.'
+                : 'Choose a date range and click Generate report.'}
+            </p>
+          )}
+        </div>
+        <div className="hidden md:block rounded-xl border border-slate-800 overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-900/80 text-slate-400 text-left">
               <tr>
