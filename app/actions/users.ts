@@ -368,7 +368,7 @@ export type AddUserInput = {
  */
 export async function addUser(
   input: AddUserInput
-): Promise<{ success: boolean; message: string }> {
+): Promise<{ success: boolean; message: string; userId?: string }> {
   const staffId = String(input.id || '')
     .trim()
     .toUpperCase()
@@ -467,6 +467,7 @@ export async function addUser(
   return {
     success: true,
     message: `User ${staffId} (${fullName}) created with access: ${accessLevel}`,
+    userId,
   }
 }
 

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { addUser } from '@/app/actions/users'
+import RegisterBiometric from '@/app/components/RegisterBiometric'
 
 const ACCESS_LEVELS = [
   { value: 'fnb', label: 'F&B' },
@@ -22,6 +23,7 @@ export default function AddUsersPage() {
   })
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [loading, setLoading] = useState(false)
+  const [createdUser, setCreatedUser] = useState<{ userId: string; name: string } | null>(null)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -36,6 +38,9 @@ export default function AddUsersPage() {
 
     if (result.success) {
       setMessage({ type: 'success', text: result.message })
+      if (result.userId) {
+        setCreatedUser({ userId: result.userId, name: form.name || form.id })
+      }
       setForm({ id: '', name: '', phone: '', accessLevel: '', password: '' })
     } else {
       setMessage({ type: 'error', text: result.message })
@@ -183,6 +188,20 @@ export default function AddUsersPage() {
             Home
           </Link>
         </div>
+
+        {/* Biometric registration after successful user creation */}
+        {createdUser && (
+          <RegisterBiometric
+            userId={createdUser.userId}
+            userName={createdUser.name}
+            onSuccess={() => {
+              setMessage({ type: 'success', text: 'User created and fingerprint registered!' })
+              setCreatedUser(null)
+            }}
+            onSkip={() => setCreatedUser(null)}
+          />
+        )}
+
       </div>
     </div>
   )

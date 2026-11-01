@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { loginAdmin } from '@/app/actions/auth'
 import Link from 'next/link'
+import BiometricLoginButton from '@/app/components/BiometricLoginButton'
 
 export default function AdminLoginPage() {
   const [staffId, setStaffId] = useState('')
@@ -113,6 +114,19 @@ export default function AdminLoginPage() {
             )}
           </button>
         </form>
+
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-700"></div>
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="px-3 bg-slate-950 text-slate-500">or</span>
+          </div>
+        </div>
+
+        {/* Biometric Login */}
+        <BiometricLoginButton expectedRole="admin" staffId={staffId} />
 
         <div className="text-center text-xs text-slate-500 space-y-2">
           <Link href="/" className="text-slate-400 hover:text-white">

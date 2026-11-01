@@ -5,6 +5,7 @@ import { loginSalesStaff } from '@/app/actions/auth'
 import Link from 'next/link'
 import LanguageToggle, { useLanguage } from '@/app/components/LanguageToggle'
 import { t } from '@/app/lib/i18n'
+import BiometricLoginButton from '@/app/components/BiometricLoginButton'
 
 export default function SalesLoginPage() {
   const lang = useLanguage()
@@ -119,6 +120,19 @@ export default function SalesLoginPage() {
             )}
           </button>
         </form>
+
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-700"></div>
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="px-3 bg-slate-900 text-slate-500">or</span>
+          </div>
+        </div>
+
+        {/* Biometric Login */}
+        <BiometricLoginButton expectedRole="sales" staffId={staffId} />
 
         {/* Footer info */}
         <div className="pt-4 border-t border-slate-800 text-center text-xs text-slate-500 space-y-2">
