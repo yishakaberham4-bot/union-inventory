@@ -32,8 +32,14 @@ export default function RegisterBiometric({
       // 1. Get registration options from server
       const options = await getRegistrationOptions(userId, userName)
 
+      if (!options || !options.challenge) {
+        setError('Could not start biometric registration. Please try again.')
+        setLoading(false)
+        return
+      }
+
       // 2. Ask browser / device to create a new credential
-      const attestation = await startRegistration({ optionsResponse: options })
+      const attestation = await startRegistration({ optionsJSON: options })
 
       // 3. Verify + save on the server
       const result = await verifyRegistration(userId, attestation)

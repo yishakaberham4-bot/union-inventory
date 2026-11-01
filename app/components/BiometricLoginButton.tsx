@@ -33,8 +33,14 @@ export default function BiometricLoginButton({
       // 1. Get authentication options from server
       const { options, challengeKey } = await getAuthenticationOptions(staffId || undefined)
 
+      if (!options || !options.challenge) {
+        setError('Could not start biometric login. Please try again.')
+        setLoading(false)
+        return
+      }
+
       // 2. Ask the browser / device for biometric
-      const assertion = await startAuthentication({ optionsResponse: options })
+      const assertion = await startAuthentication({ optionsJSON: options })
 
       // 3. Verify on the server
       const result = await verifyAuthentication(assertion, challengeKey, expectedRole)
