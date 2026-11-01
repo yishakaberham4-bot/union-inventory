@@ -54,7 +54,7 @@ export default function BiometricLoginButton({
       // 4. Complete the session
       const session = await completeBiometricLogin(result.sessionToken)
 
-      if (!session.success || !session.tokenHash || !session.email) {
+      if (!session.success || !session.tokenHash) {
         setError(session.error || 'Could not create session')
         setLoading(false)
         return
@@ -63,9 +63,8 @@ export default function BiometricLoginButton({
       // 5. Set the Supabase session on the client
       const supabase = createClient()
       const { error: verifyError } = await supabase.auth.verifyOtp({
-        email: session.email,
         token_hash: session.tokenHash,
-        type: 'magiclink',
+        type: 'email',
       })
 
       if (verifyError) {
