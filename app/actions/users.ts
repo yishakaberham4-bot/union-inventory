@@ -255,7 +255,11 @@ export async function createUser(formData: FormData) {
   }
 
   revalidatePath('/admin/users')
-  redirect('/admin/users')
+  return {
+    success: true,
+    message: `User ${staffId} (${fullName}) created successfully`,
+    userId,
+  }
 }
 
 export async function updateUser(id: string, formData: FormData) {
